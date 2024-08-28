@@ -57,3 +57,13 @@ class Continuation(LockMixin):
 
             if atom.verify():
                 break
+
+
+def init_continuation(
+    atoms: list[ContinuationAtom],
+    lock: RLock,
+):
+    return Continuation(
+        atoms=atoms,
+        lock=lock,
+    )
