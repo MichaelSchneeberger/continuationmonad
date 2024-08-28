@@ -1,41 +1,59 @@
-from abc import abstractmethod
+from __future__ import annotations
 from threading import RLock
+
+from dataclassabc import dataclassabc
 
 from continuationmonad.lockmixin import LockMixin
 
 
-class Continuation(LockMixin):
+class ContinuationAtom(LockMixin):
     __permission__ = False
-    
+
     def __init__(self, lock: RLock):
         assert self.__permission__
         self.__verified__ = False
 
-        self._lock= lock
+        self._lock = lock
 
     @property
     def lock(self) -> RLock:
         return self._lock
 
-    def verify(self):
+    def verify(self) -> bool:
         """
         A continuation can be verified exactly once.
         """
 
-        assert not self.__verified__, 'A continuation can only be verified once.'
-        self.__verified__ = True
+        with self._lock:
+            # assert not self.__verified__, 'A continuation can only be verified once.'
+            p_verified = self.__verified__
+            self.__verified__ = True
+
+        return not p_verified
 
 
-class ContinuationCollection(LockMixin):
-    continuations: list[Continuation]
+@dataclassabc
+class Continuation(LockMixin):
+    atoms: list[ContinuationAtom]
+    lock: RLock
 
+    def __add__(self, other: Continuation):
+        with self.lock:
+            # create a new list
+            atoms = self.atoms + other.atoms
 
+        return Continuation(
+            atoms=atoms,
+            lock=self.lock,
+        )
 
-type MaybeContinuation = Continuation | None
+    def verify(self):
+        while True:
+            try:
+                # remove atom from list
+                atom = self.atoms.pop()
+            except IndexError:
+                raise Exception("No continuation available.")
 
-def sort_continuations(left: MaybeContinuation, right: MaybeContinuation):
-    match (left, right):
-        case (Continuation(), _):
-            return left, right
-        case _:
-            return right, left
+            if atom.verify():
+                break

@@ -33,10 +33,7 @@ class Trampoline(Scheduler):
 
             # call scheduled function
             continuation = queued_fn()
-
-            if not isinstance(continuation, Continuation):
-                raise AssertionError(f"The scheduled function returned {continuation} instead of a Continuation object.")
-
+            
             # verify that the continuation is used once
             continuation.verify()
 
