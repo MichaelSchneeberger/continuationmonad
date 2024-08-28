@@ -1,5 +1,6 @@
 from __future__ import annotations
 from threading import RLock
+from typing import Iterable
 
 from dataclassabc import dataclassabc
 
@@ -38,12 +39,8 @@ class Continuation(LockMixin):
     lock: RLock
 
     def __add__(self, other: Continuation):
-        with self.lock:
-            # create a new list
-            atoms = self.atoms + other.atoms
-
-        return Continuation(
-            atoms=atoms,
+        return self.merge_continuations(
+            continuations=(self, other),
             lock=self.lock,
         )
 
@@ -57,6 +54,21 @@ class Continuation(LockMixin):
 
             if atom.verify():
                 break
+
+    @staticmethod
+    def merge_continuations(continuations: Iterable[Continuation], lock: RLock):
+        def gen_atoms():
+            for continuation in continuations:
+                with continuation.lock:
+                    n_atoms = list(continuation.atoms)  # copy atoms
+                
+                yield from n_atoms
+        
+        return Continuation(
+            atoms=list(gen_atoms()),
+            lock=lock
+        )
+
 
 
 def init_continuation(

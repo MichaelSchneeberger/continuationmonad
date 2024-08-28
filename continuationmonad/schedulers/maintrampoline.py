@@ -17,7 +17,3 @@ class MainTrampoline(Trampoline):
 
     def run(self, fn: Callable[[], Continuation]) -> None:
         super().run(fn=fn)
-
-
-def init_main_trampoline():
-    return MainTrampoline()
