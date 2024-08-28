@@ -8,7 +8,7 @@ def tail_recursion(count: int):
     print(f'{count=}')
 
     if count == 0:
-        return continuationmonad.return_(count)
+        return continuationmonad.from_(count)
     
     else:
         # schedule recursive call on the trampoline

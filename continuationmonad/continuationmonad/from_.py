@@ -6,7 +6,7 @@ def get_trampoline():
     return init_continuation_monad(child=init_get_trampoline())
 
 
-def return_[U](value: U):
+def from_value[U](value: U):
     return init_continuation_monad(child=init_return(value=value))
 
 
