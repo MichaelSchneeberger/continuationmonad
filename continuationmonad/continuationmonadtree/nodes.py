@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Callable
-from continuationmonad.schedulers.continuation import Continuation
+
+from continuationmonad.cancellable import CancellableLeave
+from continuationmonad.schedulers.continuationcertificate import ContinuationCertificate
 from continuationmonad.schedulers.trampoline import Trampoline
 
 
@@ -9,8 +11,9 @@ class ContinuationMonadNode[U](ABC):
     def subscribe(
         self,
         trampoline: Trampoline, 
-        on_next: Callable[[Trampoline, U], Continuation]
-    ) -> Continuation: ...
+        on_next: Callable[[Trampoline, U], ContinuationCertificate],
+        cancellable: CancellableLeave | None = None,
+    ) -> ContinuationCertificate: ...
 
 
 class SingleChildContinuationMonadNode[U, ChildU](ContinuationMonadNode[U]):

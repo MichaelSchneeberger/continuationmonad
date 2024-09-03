@@ -1,6 +1,6 @@
-from dataclasses import dataclass
-
-
-@dataclass
-class ContinuationMonadOperatorException(Exception):
+class ContinuationMonadSchedulerException(Exception):
     message: str
+
+
+class ContinuationMonadOperatorException(Exception):
+    pass

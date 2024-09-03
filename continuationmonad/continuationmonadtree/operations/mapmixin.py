@@ -1,9 +1,10 @@
 from abc import abstractmethod
 from typing import Callable
 
+from continuationmonad.cancellable import CancellableLeave
 from continuationmonad.continuationmonadtree.nodes import SingleChildContinuationMonadNode
 from continuationmonad.exceptions import ContinuationMonadOperatorException
-from continuationmonad.schedulers.continuation import Continuation
+from continuationmonad.schedulers.continuationcertificate import ContinuationCertificate
 from continuationmonad.schedulers.trampoline import Trampoline
 from continuationmonad.utils.getstacklines import FrameSummaryMixin, to_operator_exception_message
 
@@ -20,8 +21,9 @@ class MapMixin[U, ChildU](FrameSummaryMixin, SingleChildContinuationMonadNode[U,
     def subscribe(
         self,
         trampoline: Trampoline, 
-        on_next: Callable[[Trampoline, U], Continuation]
-    ) -> Continuation:
+        on_next: Callable[[Trampoline, U], ContinuationCertificate],
+        cancellable: CancellableLeave | None = None,
+    ) -> ContinuationCertificate:
         def n_on_next(n_trampoline: Trampoline, value: ChildU):
             try:
                 n_value = self.func(value)
@@ -36,4 +38,4 @@ class MapMixin[U, ChildU](FrameSummaryMixin, SingleChildContinuationMonadNode[U,
 
             return on_next(n_trampoline, n_value)
         
-        return self.child.subscribe(trampoline, n_on_next)
+        return self.child.subscribe(trampoline, n_on_next, cancellable)

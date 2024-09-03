@@ -2,15 +2,17 @@ from __future__ import annotations
 
 from collections import deque
 from threading import RLock
-from typing import Callable, override
-from continuationmonad.schedulers.continuation import Continuation
+from typing import Callable, Deque, override
+from continuationmonad.cancellable import CertificateProvider
+from continuationmonad.exceptions import ContinuationMonadSchedulerException
+from continuationmonad.schedulers.continuationcertificate import ContinuationCertificate
 from continuationmonad.schedulers.scheduler import Scheduler
 
 
 class Trampoline(Scheduler):
     def __init__(self):
         self.is_stopped = False
-        self._queue = deque()
+        self._queue: Deque[tuple[Callable, CertificateProvider | None]] = deque()
         self._lock = RLock()
 
     @property
@@ -18,24 +20,47 @@ class Trampoline(Scheduler):
         return self._lock
 
     @override
-    def schedule(self, fn: Callable[[], Continuation]) -> Continuation:
-        if self.is_stopped:
-            raise Exception('Scheduler is stopped, no functions can be scheduled.')
+    def schedule(
+        self,
+        fn: Callable[[], ContinuationCertificate],
+        certificate_provider: CertificateProvider | None = None,
+    ) -> ContinuationCertificate:
+        # if self.is_stopped and len(self._queue) == 0:
+        #     raise Exception('Scheduler is stopped, no functions can be scheduled.')
 
-        self._queue.append(fn)
+        self._queue.append((fn, certificate_provider))
         return self._create_continuation()
 
-    def run(self, fn: Callable[[], Continuation]) -> Continuation:
-        self._queue.append(fn)
+    def run(
+        self,
+        fn: Callable[[], ContinuationCertificate],
+        certificate_provider: CertificateProvider | None = None,
+    ) -> ContinuationCertificate:
+        certificate = self.schedule(fn, certificate_provider)
 
         while self._queue:
-            queued_fn = self._queue.popleft()
+            queued_fn, queued_cancellable = self._queue.popleft()
 
-            # call scheduled function
-            continuation = queued_fn()
+            if queued_cancellable and (certificate := queued_cancellable.get_certificate()):
+                pass
+
+            else:
+                # call scheduled function
+                certificate = queued_fn()
+
+            try:
+                # verify that the continuation is used once
+                verified = certificate.verify()
+
+            except Exception:
+                raise ContinuationMonadSchedulerException(
+                    f'Certificate returned by {queued_fn} could not be verified.'
+                )
             
-            # verify that the continuation is used once
-            continuation.verify()
+            if not verified:
+                raise ContinuationMonadSchedulerException(
+                    f'Certificate {certificate} has already been verified.'
+                )
 
         self.is_stopped = True
-        return self._create_continuation()
+        return certificate

@@ -6,14 +6,16 @@ from continuationmonad.schedulers.continuationcertificate import ContinuationCer
 from continuationmonad.schedulers.trampoline import Trampoline
 
 
-class GetTrampolineMixin(ContinuationMonadNode[Trampoline]):
+class ScheduleTrampolineMixin(ContinuationMonadNode[Trampoline]):
     def __str__(self) -> str:
-        return 'get_trampoline()'
+        return 'trampoline()'
 
     def subscribe(
         self,
         trampoline: Trampoline, 
         on_next: Callable[[Trampoline, Trampoline], ContinuationCertificate],
-        _: CancellableLeave | None = None,
-    ) -> ContinuationCertificate:       
-        return on_next(trampoline, trampoline)
+        cancellable: CancellableLeave | None = None,
+    ) -> ContinuationCertificate:
+        def trampoline_action():
+            return on_next(trampoline, trampoline)
+        return trampoline.schedule(trampoline_action, cancellable)
