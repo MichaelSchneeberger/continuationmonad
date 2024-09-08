@@ -1,6 +1,6 @@
 [project]
 name = "continuationmonad"
-version = "0.0.1"
+version = "0.0.2"
 description = 'A library that encapsulates callback functions within a continuation monad, utilizing a trampoline scheduler to enable stack-safe computations.'
 authors = [
   {name="Michael Schneeberger", email="michael.schneeb@hotmail.com"},

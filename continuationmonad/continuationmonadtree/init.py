@@ -1,38 +1,47 @@
 from typing import Callable
-from continuationmonad.continuationmonadtree.operations.scheduleonmixin import ScheduleOnMixin
-from continuationmonad.continuationmonadtree.operations.sharemixin import SharedMixin
-from continuationmonad.schedulers.scheduler import Scheduler
+from continuationmonad.continuationmonadtree.operations.join import Join
 from dataclassabc import dataclassabc
 
-from continuationmonad.continuationmonadtree.deferredsubscription import DeferredSubscription
-from continuationmonad.continuationmonadtree.operations.deferredmixin import DeferredMixin
-from continuationmonad.schedulers.continuationcertificate import ContinuationCertificate
-from continuationmonad.continuationmonadtree.nodes import ContinuationMonadNode
-from continuationmonad.continuationmonadtree.operations.flatmapmixin import FlatMapMixin
-from continuationmonad.continuationmonadtree.operations.gettrampolinemixin import GetTrampolineMixin
-from continuationmonad.continuationmonadtree.operations.mapmixin import MapMixin
-from continuationmonad.continuationmonadtree.operations.returnmixin import ReturnMixin
-from continuationmonad.continuationmonadtree.operations.trampolineonmixin import ScheduleTrampolineMixin
 from continuationmonad.utils.getstacklines import FrameSummary
-
+from continuationmonad.schedulers.data.continuationcertificate import ContinuationCertificate
+from continuationmonad.schedulers.scheduler import Scheduler
+from continuationmonad.continuationmonadtree.data.deferredsubscription import (
+    DeferredSubscription,
+)
+from continuationmonad.continuationmonadtree.nodes import ContinuationMonadNode
+from continuationmonad.continuationmonadtree.operations.scheduleon import ScheduleOn
+from continuationmonad.continuationmonadtree.operations.connectsubscriptions import ConnectSubscriptions
+from continuationmonad.continuationmonadtree.operations.defersubscription import DeferSubscription
+from continuationmonad.continuationmonadtree.operations.flatmap import FlatMap
+from continuationmonad.continuationmonadtree.operations.gettrampoline import (
+    GetTrampoline,
+)
+from continuationmonad.continuationmonadtree.operations.map import Map
+from continuationmonad.continuationmonadtree.operations.return_ import Return
+from continuationmonad.continuationmonadtree.operations.trampolineon import (
+    ScheduleTrampoline,
+)
 
 
 @dataclassabc(frozen=True)
-class DeferredImpl[U](DeferredMixin[U]):
-    func: Callable[[DeferredSubscription[U]], ContinuationMonadNode[ContinuationCertificate]]
+class DeferSubscriptionImpl[U](DeferSubscription[U]):
+    func: Callable[
+        [DeferredSubscription[U]], ContinuationMonadNode[ContinuationCertificate]
+    ]
 
 
-def init_deferred[U](
-    func: Callable[[DeferredSubscription[U]], ContinuationMonadNode[ContinuationCertificate]],
+def init_defer_subscription[U](
+    func: Callable[
+        [DeferredSubscription[U]], ContinuationMonadNode[ContinuationCertificate]
+    ],
 ):
-    return DeferredImpl(
+    return DeferSubscriptionImpl(
         func=func,
     )
 
 
-
 @dataclassabc(frozen=True)
-class FlatMapImpl[U, ChildU](FlatMapMixin):
+class FlatMapImpl[U, ChildU](FlatMap):
     child: ContinuationMonadNode
     func: Callable[[ChildU], ContinuationMonadNode[U]]
     stack: tuple[FrameSummary, ...]
@@ -51,7 +60,7 @@ def init_flat_map[U, ChildU](
 
 
 @dataclassabc(frozen=True)
-class GetTrampolineImpl(GetTrampolineMixin):
+class GetTrampolineImpl(GetTrampoline):
     pass
 
 
@@ -60,7 +69,16 @@ def init_get_trampoline():
 
 
 @dataclassabc(frozen=True)
-class MapImpl[U, ChildU](MapMixin):
+class JoinImpl(Join):
+    children: tuple[ContinuationMonadNode, ...]
+
+
+def init_join(children: tuple[ContinuationMonadNode, ...]):
+    return JoinImpl(children=children)
+
+
+@dataclassabc(frozen=True)
+class MapImpl[U, ChildU](Map):
     child: ContinuationMonadNode
     func: Callable[[ChildU], U]
     stack: tuple[FrameSummary, ...]
@@ -79,7 +97,7 @@ def init_map[U, ChildU](
 
 
 @dataclassabc(frozen=True)
-class ReturnImpl[U](ReturnMixin[U]):
+class ReturnImpl[U](Return[U]):
     value: U
 
 
@@ -88,23 +106,23 @@ def init_return[U](value: U):
 
 
 @dataclassabc(frozen=True)
-class SharedImpl(SharedMixin):
+class ConnectSubscriptionsImpl(ConnectSubscriptions):
     child: ContinuationMonadNode
     subscriptions: tuple[DeferredSubscription, ...]
 
 
-def init_shared(
-        child: ContinuationMonadNode,
-        subscriptions: tuple[DeferredSubscription, ...],
+def init_connect_subscriptions(
+    child: ContinuationMonadNode,
+    subscriptions: tuple[DeferredSubscription, ...],
 ):
-    return SharedImpl(
+    return ConnectSubscriptionsImpl(
         child=child,
         subscriptions=subscriptions,
     )
 
 
 @dataclassabc(frozen=True)
-class ScheduleTrampolineImpl(ScheduleTrampolineMixin):
+class ScheduleTrampolineImpl(ScheduleTrampoline):
     pass
 
 
@@ -113,7 +131,7 @@ def init_schedule_trampoline():
 
 
 @dataclassabc(frozen=True)
-class ScheduleOnImpl(ScheduleOnMixin):
+class ScheduleOnImpl(ScheduleOn):
     scheduler: Scheduler
 
 

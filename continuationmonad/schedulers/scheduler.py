@@ -1,12 +1,16 @@
 from abc import abstractmethod
+from threading import RLock
 from typing import Callable
 
 from continuationmonad.cancellable import CertificateProvider
-from continuationmonad.lockmixin import LockMixin
-from continuationmonad.schedulers.continuationcertificate import ContinuationCertificate
+from continuationmonad.schedulers.data.continuationcertificate import ContinuationCertificate
 
 
-class Scheduler(LockMixin):
+class Scheduler:
+    @property
+    @abstractmethod
+    def lock(self) -> RLock: ...
+
     @abstractmethod
     def schedule(
         self,
@@ -14,8 +18,7 @@ class Scheduler(LockMixin):
         certificate_provider: CertificateProvider | None = None,
     ) -> ContinuationCertificate: ...
 
-    @staticmethod
-    def _create_continuation():
+    def _create_certificate(self):
         _ContinuationCertificate = type(
             ContinuationCertificate.__name__,
             ContinuationCertificate.__mro__,

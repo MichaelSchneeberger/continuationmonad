@@ -2,13 +2,13 @@ from abc import abstractmethod
 from typing import Callable
 
 from continuationmonad.cancellable import CancellableLeave
-from continuationmonad.continuationmonadtree.deferredsubscription import DeferredSubscription, init_deferred_subscription
+from continuationmonad.continuationmonadtree.data.deferredsubscription import DeferredSubscription, init_deferred_subscription
 from continuationmonad.continuationmonadtree.nodes import ContinuationMonadNode
-from continuationmonad.schedulers.continuationcertificate import ContinuationCertificate
+from continuationmonad.schedulers.data.continuationcertificate import ContinuationCertificate
 from continuationmonad.schedulers.trampoline import Trampoline
 
 
-class DeferredMixin[U](ContinuationMonadNode[U]):
+class DeferSubscription[U](ContinuationMonadNode[U]):
     def __str__(self) -> str:
         return 'deferred()'
 

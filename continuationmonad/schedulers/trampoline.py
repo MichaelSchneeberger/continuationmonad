@@ -5,7 +5,7 @@ from threading import RLock
 from typing import Callable, Deque, override
 from continuationmonad.cancellable import CertificateProvider
 from continuationmonad.exceptions import ContinuationMonadSchedulerException
-from continuationmonad.schedulers.continuationcertificate import ContinuationCertificate
+from continuationmonad.schedulers.data.continuationcertificate import ContinuationCertificate
 from continuationmonad.schedulers.scheduler import Scheduler
 
 
@@ -29,7 +29,7 @@ class Trampoline(Scheduler):
         #     raise Exception('Scheduler is stopped, no functions can be scheduled.')
 
         self._queue.append((fn, certificate_provider))
-        return self._create_continuation()
+        return self._create_certificate()
 
     def run(
         self,

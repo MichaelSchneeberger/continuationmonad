@@ -1,11 +1,11 @@
 from typing import Callable, override, Generator
 
 from continuationmonad.cancellable import CancellableLeave
-from continuationmonad.continuationmonadtree.deferredsubscription import (
+from continuationmonad.continuationmonadtree.data.deferredsubscription import (
     DeferredSubscription,
 )
 from continuationmonad.continuationmonadtree.nodes import ContinuationMonadNode
-from continuationmonad.schedulers.continuationcertificate import ContinuationCertificate
+from continuationmonad.schedulers.data.continuationcertificate import ContinuationCertificate
 from continuationmonad.schedulers.trampoline import Trampoline
 
 class ContinuationMonad[U](ContinuationMonadNode[U]):
@@ -27,6 +27,6 @@ class ContinuationMonad[U](ContinuationMonadNode[U]):
         self, func: Callable[[U], ContinuationMonad[V]]
     ) -> ContinuationMonad[V]: ...
     def map[V](self, func: Callable[[U], V]) -> ContinuationMonad[V]: ...
-    def share(
-        self, connectables: tuple[DeferredSubscription, ...]
-    ) -> ContinuationMonad[ContinuationCertificate]: ...
+    def connect(
+        self, subscriptions: tuple[DeferredSubscription, ...],
+    ) -> ContinuationMonad[tuple[ContinuationCertificate, ...]]: ...

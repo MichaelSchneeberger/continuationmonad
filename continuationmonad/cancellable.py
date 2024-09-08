@@ -1,14 +1,10 @@
 from abc import ABC, abstractmethod
-from continuationmonad.schedulers.continuationcertificate import ContinuationCertificate
+from continuationmonad.schedulers.data.continuationcertificate import ContinuationCertificate
 
 
 class Cancellable(ABC):
-    # def __init__(self):
-    #     self.certificate = None
-
     @abstractmethod
     def cancel(self, certificate: ContinuationCertificate):
-        # self.cancelled = certificate
         ...
 
 

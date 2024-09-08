@@ -1,44 +1,23 @@
 from typing import Callable, Iterable, Iterator
+import itertools
 
 from continuationmonad.continuationmonad.continuationmonad import ContinuationMonad
 from continuationmonad.continuationmonad.init import init_continuation_monad
-from continuationmonad.continuationmonadtree.init import init_get_trampoline, init_return, init_schedule_on, init_schedule_trampoline
+from continuationmonad.continuationmonadtree.data.deferredsubscription import (
+    DeferredSubscription,
+)
+from continuationmonad.continuationmonadtree.init import (
+    init_defer_subscription,
+    init_get_trampoline,
+    init_join,
+    init_return,
+    init_schedule_on,
+    init_schedule_trampoline,
+)
+from continuationmonad.continuationmonadtree.nodes import ContinuationMonadNode
+from continuationmonad.schedulers.data.continuationcertificate import ContinuationCertificate
 from continuationmonad.schedulers.scheduler import Scheduler
-
-
-def get_trampoline():
-    return init_continuation_monad(child=init_get_trampoline())
-
-
-def from_value[U](value: U):
-    return init_continuation_monad(child=init_return(value=value))
-
-
-def schedule_on(scheduler: Scheduler):
-    return init_continuation_monad(init_schedule_on(scheduler=scheduler))
-
-
-def schedule_trampoline():
-    return init_continuation_monad(child=init_schedule_trampoline())
-
-
-class zip[U]:
-    def __new__(
-        _, continuations: Iterable[ContinuationMonad[U]]
-    ) -> ContinuationMonad[tuple[U, ...]]:
-        continuations_iterator = iter(continuations)
-
-        try:
-            current = next(continuations_iterator).map(lambda v: (v,))
-        except StopIteration:
-            return from_value(tuple[U]())
-
-        for other in continuations_iterator:
-            current = other.flat_map(
-                lambda v, current=current: current.map(lambda t: t + (v,))
-            )
-
-        return current
+from continuationmonad.schedulers.trampoline import Trampoline
 
 
 def accumulate[S, T](
@@ -53,7 +32,6 @@ def accumulate[S, T](
             value = next(iterator)
         except StopIteration:
             return from_value(acc)
-        print(value)
 
         def func1(n_acc):
             def func2(_):
@@ -65,3 +43,37 @@ def accumulate[S, T](
         return func(acc, value).flat_map(func1)
 
     return _accumulate(initial, iterator)
+
+
+def defer[U](
+    func: Callable[
+        [DeferredSubscription[U]], ContinuationMonadNode[ContinuationCertificate]
+    ],
+):
+    return init_continuation_monad(child=init_defer_subscription(func=func))
+
+
+def join[U](
+    continuations: Iterable[ContinuationMonad[U]],
+):
+    return init_continuation_monad(init_join(children=tuple(continuations)))
+
+
+def from_value[U](value: U):
+    return init_continuation_monad(child=init_return(value=value))
+
+
+def get_trampoline():
+    return init_continuation_monad(child=init_get_trampoline())
+
+
+def schedule_on(scheduler: Scheduler):
+    return init_continuation_monad(init_schedule_on(scheduler=scheduler))
+
+
+def schedule_trampoline():
+    return init_continuation_monad(child=init_schedule_trampoline())
+
+
+def tail_rec[U](func: Callable[[], ContinuationMonad[U]]):
+    return schedule_trampoline().flat_map(lambda _: func())

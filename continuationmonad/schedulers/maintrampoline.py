@@ -1,6 +1,6 @@
 from typing import Callable
 from continuationmonad.cancellable import CertificateProvider
-from continuationmonad.schedulers.continuationcertificate import ContinuationCertificate
+from continuationmonad.schedulers.data.continuationcertificate import ContinuationCertificate
 from continuationmonad.schedulers.trampoline import Trampoline
 
 
@@ -14,7 +14,7 @@ class MainTrampoline(Trampoline):
             raise Exception("Scheduler can only be stopped once.")
 
         self.is_stopped = True
-        return self._create_continuation()
+        return self._create_certificate()
 
     def run(
         self,

@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Callable
 
 from continuationmonad.cancellable import CertificateProvider
-from continuationmonad.schedulers.continuationcertificate import ContinuationCertificate
+from continuationmonad.schedulers.data.continuationcertificate import ContinuationCertificate
 
 
 class Scheduler(ABC):
@@ -13,4 +13,4 @@ class Scheduler(ABC):
         certificate_provider: CertificateProvider | None = None,
     ) -> ContinuationCertificate: ...
 
-    def _create_continuation(self) -> ContinuationCertificate: ...
+    def _create_certificate(self) -> ContinuationCertificate: ...

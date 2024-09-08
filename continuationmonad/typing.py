@@ -4,8 +4,12 @@ from continuationmonad.cancellable import (
 from continuationmonad.continuationmonad.continuationmonad import (
     ContinuationMonad as _ContinuationMonad,
 )
-from continuationmonad.continuationmonadtree.deferredsubscription import DeferredSubscription as _DeferredSubscription
-from continuationmonad.schedulers.continuationcertificate import ContinuationCertificate as _ContinuationCertificate
+from continuationmonad.continuationmonadtree.data.deferredsubscription import (
+    DeferredSubscription as _DeferredSubscription,
+)
+from continuationmonad.schedulers.data.continuationcertificate import (
+    ContinuationCertificate as _ContinuationCertificate,
+)
 from continuationmonad.schedulers.maintrampoline import (
     MainTrampoline as _MainTrampoline,
 )
@@ -21,4 +25,3 @@ MainTrampoline = _MainTrampoline
 
 DeferredSubscription = _DeferredSubscription
 ContinuationMonad = _ContinuationMonad
-

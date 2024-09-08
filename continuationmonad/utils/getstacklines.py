@@ -33,7 +33,7 @@ def to_operator_traceback(
     assert stack is not None
 
     traceback_line = (
-        "StateMonad Operation Traceback (most recent call last):",
+        "ContinuationMonad Operation Traceback (most recent call last):",
         *(
             f'  File "{stack_line.filename}", line {stack_line.lineno}\n    {stack_line.line}'
             for stack_line in stack
@@ -45,7 +45,7 @@ def to_operator_traceback(
 
 def to_operator_exception_message(stack: tuple[FrameSummary, ...]):
     message = (
-        'State Monad operator exception caught. '
+        'Continuation Monad operator exception caught. '
         'See the traceback below for details on the operator call stack.'
         '\n'
     )

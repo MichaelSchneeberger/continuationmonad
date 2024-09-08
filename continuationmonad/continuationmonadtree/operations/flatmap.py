@@ -7,7 +7,7 @@ from continuationmonad.continuationmonadtree.nodes import (
     SingleChildContinuationMonadNode,
 )
 from continuationmonad.exceptions import ContinuationMonadOperatorException
-from continuationmonad.schedulers.continuationcertificate import ContinuationCertificate
+from continuationmonad.schedulers.data.continuationcertificate import ContinuationCertificate
 from continuationmonad.schedulers.trampoline import Trampoline
 from continuationmonad.utils.getstacklines import (
     FrameSummaryMixin,
@@ -15,7 +15,7 @@ from continuationmonad.utils.getstacklines import (
 )
 
 
-class FlatMapMixin[U, ChildU](
+class FlatMap[U, ChildU](
     FrameSummaryMixin, SingleChildContinuationMonadNode[U, ChildU]
 ):
     def __str__(self) -> str:
@@ -32,19 +32,25 @@ class FlatMapMixin[U, ChildU](
         cancellable: CancellableLeave | None = None,
     ) -> ContinuationCertificate:
         def n_on_next(n_trampoline: Trampoline, value: ChildU):
-            try:
-                continuation = self.func(value).subscribe(
-                    n_trampoline, on_next, cancellable
-                )
 
+            try:
+                continuation = self.func(value)
             except ContinuationMonadOperatorException:
                 raise
-
             except Exception:
-                raise ContinuationMonadOperatorException(
-                    to_operator_exception_message(stack=self.stack)
+                msg = to_operator_exception_message(stack=self.stack)
+                raise ContinuationMonadOperatorException(f'{msg}')
+            
+            try:
+                certificate = continuation.subscribe(
+                    n_trampoline, on_next, cancellable
                 )
+            except ContinuationMonadOperatorException:
+                raise
+            except Exception:
+                msg = to_operator_exception_message(stack=self.stack)
+                raise ContinuationMonadOperatorException(f'{msg}')
 
-            return continuation
+            return certificate
 
         return self.child.subscribe(trampoline, n_on_next, cancellable)

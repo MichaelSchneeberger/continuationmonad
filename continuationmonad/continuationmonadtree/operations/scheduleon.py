@@ -3,14 +3,14 @@ from typing import Callable
 
 from continuationmonad.cancellable import CancellableLeave
 from continuationmonad.continuationmonadtree.nodes import ContinuationMonadNode
-from continuationmonad.schedulers.continuationcertificate import ContinuationCertificate
+from continuationmonad.schedulers.data.continuationcertificate import ContinuationCertificate
 from continuationmonad.schedulers.init import init_trampoline
 from continuationmonad.schedulers.scheduler import Scheduler
 from continuationmonad.schedulers.trampoline import Trampoline
 
 
 
-class ScheduleOnMixin(ContinuationMonadNode[None]):
+class ScheduleOn(ContinuationMonadNode[None]):
     def __str__(self) -> str:
         return f'schedule_on({self.scheduler})'
 
