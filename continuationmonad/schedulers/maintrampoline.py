@@ -1,27 +1,33 @@
 from typing import Callable
-from continuationmonad.cancellable import CertificateProvider
-from continuationmonad.schedulers.data.continuationcertificate import ContinuationCertificate
+from continuationmonad.continuationcertificate import (
+    ContinuationCertificate,
+)
 from continuationmonad.schedulers.trampoline import Trampoline
+from continuationmonad.utils.framesummary import get_frame_summary
 
 
 class MainTrampoline(Trampoline):
-    def stop(self) -> ContinuationCertificate:
+    def __init__(self):
+        self.is_stopped = False
+
+        super().__init__()
+
+    def stop(self):
         """
         The stop function is capable of creating the finishing Continuation
         """
 
-        if self.is_stopped:
-            raise Exception("Scheduler can only be stopped once.")
+        with self._lock:
+            if self.is_stopped:
+                raise Exception("Scheduler can only be stopped once.")
+            self.is_stopped = True
 
-        self.is_stopped = True
-        return self._create_certificate()
+        return self._create_certificates(weight=1, stack=get_frame_summary())
 
     def run(
         self,
-        fn: Callable[[], ContinuationCertificate],
-        certificate_provider: CertificateProvider | None = None,
+        task: Callable[[], ContinuationCertificate],
     ) -> None:
         super().run(
-            fn=fn, 
-            certificate_provider=certificate_provider,
+            task=task,
         )

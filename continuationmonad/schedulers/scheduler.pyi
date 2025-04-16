@@ -1,16 +1,44 @@
-from abc import ABC, abstractmethod
-from typing import Callable
+from typing import Callable, overload
 
-from continuationmonad.cancellable import CertificateProvider
-from continuationmonad.schedulers.data.continuationcertificate import ContinuationCertificate
+from continuationmonad.cancellation import Cancellation
+from continuationmonad.continuationcertificate import (
+    ContinuationCertificate,
+)
+from continuationmonad.utils.framesummary import FrameSummary
 
-
-class Scheduler(ABC):
-    @abstractmethod
+class Scheduler:
+    @overload
     def schedule(
         self,
-        fn: Callable[[], ContinuationCertificate],
-        certificate_provider: CertificateProvider | None = None,
+        task: Callable[[], ContinuationCertificate],
     ) -> ContinuationCertificate: ...
-
-    def _create_certificate(self) -> ContinuationCertificate: ...
+    @overload
+    def schedule(
+        self,
+        task: Callable[[], ContinuationCertificate],
+        weight: int | None,
+    ) -> ContinuationCertificate: ...
+    @overload
+    def schedule(
+        self,
+        task: Callable[[], ContinuationCertificate],
+        cancellation: Cancellation | None,
+    ) -> ContinuationCertificate: ...
+    @overload
+    def schedule(
+        self,
+        task: Callable[[], ContinuationCertificate],
+        weight: int | None,
+        cancellation: Cancellation | None,
+    ) -> ContinuationCertificate: ...
+    def _create_certificates(
+        self, 
+        weight: int, 
+        stack: tuple[FrameSummary, ...]
+    ) -> ContinuationCertificate: ...
+    def _execute_task(
+        self,
+        task: Callable[[], ContinuationCertificate],
+        weight: int,
+        cancellation: Cancellation | None,
+    ) -> None: ...

@@ -28,16 +28,7 @@ def count_down(count: int):
         # schedule recursive call on the trampoline
         return continuationmonad.tail_rec(lambda: count_down(count - 1))
 
-trampoline = continuationmonad.init_main_trampoline()
-
-def action():
-    def on_next(_, value: int):
-        print(f'{value=}')
-        return trampoline.stop()
-
-    continuation = count_down(5)
-    return continuation.subscribe(trampoline, on_next)
-
-trampoline.run(action)
+# runs continuation and returns 0
+result = count_down(5).run()
 ```
 

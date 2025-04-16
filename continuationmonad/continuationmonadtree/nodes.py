@@ -1,24 +1,24 @@
 from abc import ABC, abstractmethod
-from typing import Callable
 
-from continuationmonad.cancellable import CancellableLeave
-from continuationmonad.schedulers.data.continuationcertificate import ContinuationCertificate
-from continuationmonad.schedulers.trampoline import Trampoline
+from continuationmonad.continuationmonadtree.subscribeargs import (
+    SubscribeArgs,
+)
+from continuationmonad.continuationcertificate import (
+    ContinuationCertificate,
+)
 
 
 class ContinuationMonadNode[U](ABC):
     @abstractmethod
     def subscribe(
         self,
-        trampoline: Trampoline, 
-        on_next: Callable[[Trampoline, U], ContinuationCertificate],
-        cancellable: CancellableLeave | None = None,
+        args: SubscribeArgs,
     ) -> ContinuationCertificate: ...
 
 
 class SingleChildContinuationMonadNode[U, ChildU](ContinuationMonadNode[U]):
     """
-    Represents a state monad node with a single child.
+    Represents a continuation monad node with a single child.
     """
 
     @property
@@ -28,7 +28,7 @@ class SingleChildContinuationMonadNode[U, ChildU](ContinuationMonadNode[U]):
 
 class TwoChildrenContinuationMonadNode[U, L, R](ContinuationMonadNode[U]):
     """
-    Represents a state monad node with two children.
+    Represents a continuation monad node with two children.
     """
 
     @property
@@ -42,7 +42,7 @@ class TwoChildrenContinuationMonadNode[U, L, R](ContinuationMonadNode[U]):
 
 class MultiChildrenContinuationMonadNode[U, UChild](ContinuationMonadNode[U]):
     """
-    Represents a state monad node with two children.
+    Represents a continuation monad node with many children.
     """
 
     @property

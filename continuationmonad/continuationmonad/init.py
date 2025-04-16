@@ -6,17 +6,17 @@ from continuationmonad.continuationmonad.continuationmonad import ContinuationMo
 from continuationmonad.continuationmonadtree.nodes import ContinuationMonadNode
 
 
-@dataclassabc(frozen=True)
-class ContinuationMonadImpl[U](ContinuationMonad[U]):
-    child: ContinuationMonadNode[U]
+@dataclassabc(frozen=True, slots=True)
+class ContinuationMonadImpl(ContinuationMonad):
+    child: ContinuationMonadNode
 
     def __str__(self) -> str:
         return f"ContinuationMonad({self.child})"
 
     @override
-    def copy(self, /, **changes) -> ContinuationMonad[U]:
+    def copy(self, /, **changes) -> ContinuationMonad:
         return replace(self, **changes)
 
 
-def init_continuation_monad[U](child: ContinuationMonadNode[U]):
-    return ContinuationMonadImpl[U](child=child)
+def init_continuation_monad(child: ContinuationMonadNode):
+    return ContinuationMonadImpl(child=child)

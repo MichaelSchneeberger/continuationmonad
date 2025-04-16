@@ -3,70 +3,72 @@ from typing import Callable
 from dataclasses import dataclass
 from threading import RLock
 
-from continuationmonad.cancellable import CancellableLeave
-from continuationmonad.continuationmonadtree.nodes import MultiChildrenContinuationMonadNode
-from continuationmonad.schedulers.data.continuationcertificate import ContinuationCertificate
+from continuationmonad.continuationcertificate import ContinuationCertificate
 from continuationmonad.schedulers.trampoline import Trampoline
+from continuationmonad.continuationmonadtree.subscribeargs import SubscribeArgs
+from continuationmonad.continuationmonadtree.nodes import (
+    MultiChildrenContinuationMonadNode,
+)
 
 
-class JoinAction: ...
+class ZipState: ...
 
 
 @dataclass
-class WaitAction(JoinAction):
+class WaitState(ZipState):
     counter: int
 
 
-class OnNextAction(JoinAction): ...
+class OnNextState(ZipState): ...
 
 
-class JoinState(ABC):
+class ZipAction(ABC):
     @abstractmethod
-    def get_action(self) -> JoinAction: ...
+    def get_action(self) -> ZipState: ...
 
     @abstractmethod
     def get_values(self) -> tuple: ...
 
 
-
 @dataclass
-class BaseState(JoinState):
+class BaseAction(ZipAction):
     counter: int
 
     def get_action(self):
-        return WaitAction(counter=self.counter)
-    
+        return WaitState(counter=self.counter)
+
     def get_values(self) -> tuple:
         return tuple()
 
 
 @dataclass
-class OnNext[U](JoinState):
-    child: JoinState
+class OnNextAction[U](ZipAction):
+    child: ZipAction
     value: U
 
     def get_action(self):
         p_node = self.child.get_action()
 
         match p_node:
-            case WaitAction(counter=1):
-                return OnNextAction()
-            case WaitAction(counter=counter):
-                return WaitAction(counter=counter - 1)
-            
+            case WaitState(counter=1):
+                return OnNextState()
+            case WaitState(counter=counter):
+                return WaitState(counter=counter - 1)
+
     def get_values(self) -> tuple:
         return self.child.get_values() + (self.value,)
 
+
 @dataclass
-class OnNextJoin[U]:
-    state: JoinState
+class OnNextZip[U]:
+    state: ZipAction
     lock: RLock
     certificates: list[ContinuationCertificate]
     on_next: Callable[[Trampoline, tuple[U, ...]], ContinuationCertificate]
 
     def __call__(self, trampoline: Trampoline, value: U):
-        node = OnNext(
-            child=None, # type: ignore
+        node = OnNextAction(
+            child=None,  # type: ignore
             value=value,
         )
 
@@ -77,40 +79,44 @@ class OnNextJoin[U]:
         action = node.get_action()
 
         match action:
-            case OnNextAction():
+            case OnNextState():
                 return self.on_next(trampoline, node.get_values())
             case _:
                 return self.certificates.pop()
 
 
-class Join[U](MultiChildrenContinuationMonadNode[U, tuple[U, ...]]):
+class Zip[U](MultiChildrenContinuationMonadNode[U, tuple[U, ...]]):
     def __str__(self) -> str:
-        return 'join()'
+        return f"zip({self.children})"
 
     def subscribe(
         self,
-        trampoline: Trampoline, 
-        on_next: Callable[[Trampoline, tuple[U, ...]], ContinuationCertificate],
-        cancellable: CancellableLeave | None = None,
+        args: SubscribeArgs,
     ) -> ContinuationCertificate:
-        on_next = OnNextJoin(
-            state=BaseState(counter=len(self.children)),
+        on_next = OnNextZip(
+            state=BaseAction(counter=len(self.children)),
             lock=RLock(),
-            certificates=None, # type: ignore
-            on_next=on_next,
+            certificates=None,  # type: ignore
+            on_next=args.on_next,
         )
-        
+        args = args.copy(on_next=on_next)
+
         def gen_certificates():
             for child in self.children:
-                def child_subscription(child=child):
-                    return child.subscribe(trampoline, on_next, cancellable=cancellable)
 
-                yield trampoline.schedule(child_subscription)
+                def child_subscription(child=child):
+                    return child.subscribe(args=args)
+
+                yield args.trampoline.schedule(
+                    child_subscription,
+                    weight=args.weight,
+                    cancellation=args.cancellation,
+                )
 
         certificates_iter = gen_certificates()
 
         certificate = next(certificates_iter)
-        
+
         # overwrite certificates attribute
         on_next.certificates = list(certificates_iter)
 

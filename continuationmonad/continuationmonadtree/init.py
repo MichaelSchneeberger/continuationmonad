@@ -1,58 +1,59 @@
-from typing import Callable
-from continuationmonad.continuationmonadtree.operations.join import Join
+from typing import Any, Callable
 from dataclassabc import dataclassabc
 
-from continuationmonad.utils.getstacklines import FrameSummary
-from continuationmonad.schedulers.data.continuationcertificate import ContinuationCertificate
-from continuationmonad.schedulers.scheduler import Scheduler
-from continuationmonad.continuationmonadtree.data.deferredsubscription import (
-    DeferredSubscription,
+from continuationmonad.utils.framesummary import FrameSummary
+from continuationmonad.continuationcertificate import (
+    ContinuationCertificate,
 )
+from continuationmonad.schedulers.scheduler import Scheduler
+from continuationmonad.schedulers.trampoline import Trampoline
+from continuationmonad.continuationmonadtree.deferredobserver import DeferredObserver
 from continuationmonad.continuationmonadtree.nodes import ContinuationMonadNode
-from continuationmonad.continuationmonadtree.operations.scheduleon import ScheduleOn
-from continuationmonad.continuationmonadtree.operations.connectsubscriptions import ConnectSubscriptions
-from continuationmonad.continuationmonadtree.operations.defersubscription import DeferSubscription
+from continuationmonad.continuationmonadtree.operations.zip import Zip
+from continuationmonad.continuationmonadtree.sources.scheduleon import ScheduleOn
+from continuationmonad.continuationmonadtree.operations.connect import (
+    Connect,
+)
+from continuationmonad.continuationmonadtree.operations.defer import (
+    Defer,
+)
 from continuationmonad.continuationmonadtree.operations.flatmap import FlatMap
-from continuationmonad.continuationmonadtree.operations.gettrampoline import (
+from continuationmonad.continuationmonadtree.sources.gettrampoline import (
     GetTrampoline,
 )
 from continuationmonad.continuationmonadtree.operations.map import Map
-from continuationmonad.continuationmonadtree.operations.return_ import Return
-from continuationmonad.continuationmonadtree.operations.trampolineon import (
-    ScheduleTrampoline,
-)
+from continuationmonad.continuationmonadtree.sources.fromvalue import FromValue
 
 
 @dataclassabc(frozen=True)
-class DeferSubscriptionImpl[U](DeferSubscription[U]):
-    func: Callable[
-        [DeferredSubscription[U]], ContinuationMonadNode[ContinuationCertificate]
-    ]
+class DeferImpl[_](Defer):  # hide Impl classes in init.pyi for type hinting
+    func: Callable[[Trampoline, DeferredObserver], ContinuationCertificate]
+    stack: tuple[FrameSummary, ...]
 
 
-def init_defer_subscription[U](
-    func: Callable[
-        [DeferredSubscription[U]], ContinuationMonadNode[ContinuationCertificate]
-    ],
+def init_defer(
+    func: Callable[[Trampoline, DeferredObserver], ContinuationCertificate],
+    stack: tuple[FrameSummary, ...],
 ):
-    return DeferSubscriptionImpl(
+    return DeferImpl(
         func=func,
+        stack=stack,
     )
 
 
 @dataclassabc(frozen=True)
-class FlatMapImpl[U, ChildU](FlatMap):
+class FlatMapImpl[_, __](FlatMap):
     child: ContinuationMonadNode
-    func: Callable[[ChildU], ContinuationMonadNode[U]]
+    func: Callable[[Any], ContinuationMonadNode]
     stack: tuple[FrameSummary, ...]
 
 
-def init_flat_map[U, ChildU](
+def init_flat_map(
     child: ContinuationMonadNode,
-    func: Callable[[ChildU], ContinuationMonadNode[U]],
+    func: Callable[[Any], ContinuationMonadNode],
     stack: tuple[FrameSummary, ...],
 ):
-    return FlatMapImpl[U, ChildU](
+    return FlatMapImpl(
         child=child,
         func=func,
         stack=stack,
@@ -69,27 +70,23 @@ def init_get_trampoline():
 
 
 @dataclassabc(frozen=True)
-class JoinImpl(Join):
+class ZipImpl[_](Zip):
     children: tuple[ContinuationMonadNode, ...]
 
 
-def init_join(children: tuple[ContinuationMonadNode, ...]):
-    return JoinImpl(children=children)
+def init_zip(children: tuple[ContinuationMonadNode, ...]):
+    return ZipImpl(children=children)
 
 
 @dataclassabc(frozen=True)
-class MapImpl[U, ChildU](Map):
+class MapImpl[_, __](Map):
     child: ContinuationMonadNode
-    func: Callable[[ChildU], U]
+    func: Callable
     stack: tuple[FrameSummary, ...]
 
 
-def init_map[U, ChildU](
-    child: ContinuationMonadNode,
-    func: Callable[[ChildU], U],
-    stack: tuple[FrameSummary, ...],
-):
-    return MapImpl[U, ChildU](
+def init_map(child, func, stack):
+    return MapImpl(
         child=child,
         func=func,
         stack=stack,
@@ -97,37 +94,25 @@ def init_map[U, ChildU](
 
 
 @dataclassabc(frozen=True)
-class ReturnImpl[U](Return[U]):
-    value: U
+class FromValueImpl[_](FromValue):
+    value: Any
 
 
-def init_return[U](value: U):
-    return ReturnImpl(value=value)
+def init_from_value(value):
+    return FromValueImpl(value)
 
 
 @dataclassabc(frozen=True)
-class ConnectSubscriptionsImpl(ConnectSubscriptions):
+class ConnectImpl(Connect):
     child: ContinuationMonadNode
-    subscriptions: tuple[DeferredSubscription, ...]
+    observers: tuple[DeferredObserver, ...]
 
 
-def init_connect_subscriptions(
-    child: ContinuationMonadNode,
-    subscriptions: tuple[DeferredSubscription, ...],
-):
-    return ConnectSubscriptionsImpl(
+def init_connect(child, observers):
+    return ConnectImpl(
         child=child,
-        subscriptions=subscriptions,
+        observers=observers,
     )
-
-
-@dataclassabc(frozen=True)
-class ScheduleTrampolineImpl(ScheduleTrampoline):
-    pass
-
-
-def init_schedule_trampoline():
-    return ScheduleTrampolineImpl()
 
 
 @dataclassabc(frozen=True)
@@ -135,5 +120,9 @@ class ScheduleOnImpl(ScheduleOn):
     scheduler: Scheduler
 
 
-def init_schedule_on(scheduler: Scheduler):
-    return ScheduleOnImpl(scheduler=scheduler)
+def init_schedule_on(
+    scheduler: Scheduler,
+):
+    return ScheduleOnImpl(
+        scheduler=scheduler,
+    )

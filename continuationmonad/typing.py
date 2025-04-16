@@ -1,27 +1,27 @@
-from continuationmonad.cancellable import (
-    Cancellable as _Cancellable,
+from continuationmonad.cancellation import (
+    Cancellation as _Cancellation,
+)
+from continuationmonad.continuationcertificate import (
+    ContinuationCertificate as _ContinuationCertificate,
+)
+from continuationmonad.schedulers.scheduler import Scheduler as _Scheduler
+from continuationmonad.schedulers.trampoline import Trampoline as _Trampoline
+from continuationmonad.continuationmonadtree.deferredobserver import (
+    DeferredObserver as _DeferredObserver,
+)
+from continuationmonad.continuationmonadtree.subscribeargs import (
+    SubscribeArgs as _SubscribeArgs
 )
 from continuationmonad.continuationmonad.continuationmonad import (
     ContinuationMonad as _ContinuationMonad,
 )
-from continuationmonad.continuationmonadtree.data.deferredsubscription import (
-    DeferredSubscription as _DeferredSubscription,
-)
-from continuationmonad.schedulers.data.continuationcertificate import (
-    ContinuationCertificate as _ContinuationCertificate,
-)
-from continuationmonad.schedulers.maintrampoline import (
-    MainTrampoline as _MainTrampoline,
-)
-from continuationmonad.schedulers.scheduler import Scheduler as _Scheduler
-from continuationmonad.schedulers.trampoline import Trampoline as _Trampoline
 
 
-Cancellable = _Cancellable
+Cancellation = _Cancellation
 ContinuationCertificate = _ContinuationCertificate
 Scheduler = _Scheduler
 Trampoline = _Trampoline
-MainTrampoline = _MainTrampoline
 
-DeferredSubscription = _DeferredSubscription
+DeferredObserver = _DeferredObserver
+SubscribeArgs = _SubscribeArgs
 ContinuationMonad = _ContinuationMonad
