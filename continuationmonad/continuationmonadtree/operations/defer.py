@@ -44,9 +44,15 @@ class Defer[U](FrameSummaryMixin, ContinuationMonadNode[U]):
             raise ContinuationMonadOperatorException(
                 self.to_operator_exception_message(stack=self.stack)
             )
+        
+        if isinstance(continuation, ContinuationCertificate):
+            assert continuation.weight == args.weight, f'{continuation.weight} does not match {args.weight}'
 
-        return continuation.subscribe(
-            args=args.copy(
-                on_next=lambda _, v: v,
+            return continuation
+        
+        else:
+            return continuation.subscribe(
+                args=args.copy(
+                    on_next=lambda _, v: v,
+                )
             )
-        )
