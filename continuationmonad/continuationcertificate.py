@@ -70,7 +70,12 @@ class ContinuationCertificate(FrameSummaryMixin):
         return tuple(gen_certificates())
 
     def take(self, weight: int):
-        assert weight <= self._weight, f"{weight} is larger than {self._weight}"
+        if self._weight < weight:
+            traceback_msg = self.to_operator_traceback(stack=self._stack)
+            raise ContinuationMonadOperatorException(
+                f"{weight} is larger than {self._weight}"
+                f"\n{traceback_msg}"
+            )
 
         return self.split(
             partition=(weight, self._weight - weight), 

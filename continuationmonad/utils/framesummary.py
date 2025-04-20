@@ -27,6 +27,30 @@ def get_frame_summary(index: int = 3):
     return tuple(gen_stack_lines())
 
 
+def to_operator_traceback(stack: tuple[FrameSummary, ...]):
+    assert stack is not None
+
+    traceback_line = (
+        "ContinuationMonad Operation Traceback (most recent call last):",
+        *(
+            f'  File "{stack_line.filename}", line {stack_line.lineno}\n    {stack_line.line}'
+            for stack_line in stack
+        ),
+    )
+
+    return "\n".join(traceback_line)
+
+
+def to_operator_exception_message(stack: tuple[FrameSummary, ...]):
+    message = (
+        "Continuation Monad operator exception caught. "
+        "See the traceback below for details on the operator call stack."
+        "\n"
+    )
+    traceback = to_operator_traceback(stack=stack)
+    return f"{message}\n{traceback}"
+
+
 class FrameSummaryMixin:
     @property
     @abstractmethod
@@ -41,25 +65,6 @@ class FrameSummaryMixin:
         )  # type: ignore
 
         return f"{self.__class__.__name__}({fields_str})"
-
-    def to_operator_traceback(self, stack: tuple[FrameSummary, ...]):
-        assert stack is not None
-
-        traceback_line = (
-            "ContinuationMonad Operation Traceback (most recent call last):",
-            *(
-                f'  File "{stack_line.filename}", line {stack_line.lineno}\n    {stack_line.line}'
-                for stack_line in stack
-            ),
-        )
-
-        return "\n".join(traceback_line)
-
-    def to_operator_exception_message(self, stack: tuple[FrameSummary, ...]):
-        message = (
-            "Continuation Monad operator exception caught. "
-            "See the traceback below for details on the operator call stack."
-            "\n"
-        )
-        traceback = self.to_operator_traceback(stack=stack)
-        return f"{message}\n{traceback}"
+    
+    to_operator_traceback = staticmethod(to_operator_traceback)
+    to_operator_exception_message = staticmethod(to_operator_exception_message)

@@ -2,12 +2,12 @@ from abc import ABC, abstractmethod
 from threading import RLock
 from typing import Callable
 
-from continuationmonad.exceptions import ContinuationMonadSchedulerException
+from continuationmonad.exceptions import ContinuationMonadOperatorException, ContinuationMonadSchedulerException
 from continuationmonad.cancellation import Cancellation
 from continuationmonad.continuationcertificate import (
     ContinuationCertificate,
 )
-from continuationmonad.utils.framesummary import FrameSummary
+from continuationmonad.utils.framesummary import FrameSummary, to_operator_traceback
 
 
 class Scheduler(ABC):
@@ -19,7 +19,7 @@ class Scheduler(ABC):
     def schedule(
         self,
         task: Callable[[], ContinuationCertificate],
-        weight: int | None = None,
+        weight: int,
         cancellation: Cancellation | None = None,
     ) -> ContinuationCertificate: ...
 
@@ -27,19 +27,30 @@ class Scheduler(ABC):
         self,
         task: Callable[[], ContinuationCertificate],
         weight: int,
+        stack: tuple[FrameSummary, ...],
         cancellation: Cancellation | None = None,
     ):
         # if task it cancelled, retrieve certificate from is_cancelled
         if cancellation and (
             certificate := cancellation.is_cancelled()
         ):
-            pass
+            source = cancellation
 
         else:
             # call scheduled task
             certificate = task()
+            source = task
 
-        certificate.verify(weight=weight)
+        try:
+            certificate.verify(weight=weight)
+
+        except Exception:
+            traceback_msg = to_operator_traceback(stack=stack)
+            raise ContinuationMonadOperatorException(
+                f"The certificate returned by {source} could not be verified."
+                f"\n{traceback_msg}"
+            )
+
     def _create_certificates(
         self,
         weight: int,

@@ -75,6 +75,8 @@ class ZipImpl[_](Zip):
 
 
 def init_zip(children: tuple[ContinuationMonadNode, ...]):
+    assert 1 <= len(children)
+
     return ZipImpl(children=children)
 
 

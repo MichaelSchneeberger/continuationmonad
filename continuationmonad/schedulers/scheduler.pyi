@@ -11,24 +11,13 @@ class Scheduler:
     def schedule(
         self,
         task: Callable[[], ContinuationCertificate],
+        weight: int,
     ) -> ContinuationCertificate: ...
     @overload
     def schedule(
         self,
         task: Callable[[], ContinuationCertificate],
-        weight: int | None,
-    ) -> ContinuationCertificate: ...
-    @overload
-    def schedule(
-        self,
-        task: Callable[[], ContinuationCertificate],
-        cancellation: Cancellation | None,
-    ) -> ContinuationCertificate: ...
-    @overload
-    def schedule(
-        self,
-        task: Callable[[], ContinuationCertificate],
-        weight: int | None,
+        weight: int,
         cancellation: Cancellation | None,
     ) -> ContinuationCertificate: ...
     def _create_certificates(
@@ -40,5 +29,6 @@ class Scheduler:
         self,
         task: Callable[[], ContinuationCertificate],
         weight: int,
+        stack: tuple[FrameSummary, ...],
         cancellation: Cancellation | None,
     ) -> None: ...

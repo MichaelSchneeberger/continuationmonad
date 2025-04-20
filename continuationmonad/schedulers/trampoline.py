@@ -9,7 +9,7 @@ from continuationmonad.continuationcertificate import (
     ContinuationCertificate,
 )
 from continuationmonad.schedulers.scheduler import Scheduler
-from continuationmonad.utils.framesummary import get_frame_summary
+from continuationmonad.utils.framesummary import FrameSummary, get_frame_summary
 
 
 class Trampoline(Scheduler):
@@ -20,6 +20,7 @@ class Trampoline(Scheduler):
                 Callable[[], ContinuationCertificate],
                 int,
                 Cancellation | None,
+                tuple[FrameSummary, ...]
             ]
         ] = deque()
         self._lock = RLock()
@@ -37,11 +38,12 @@ class Trampoline(Scheduler):
         first_certificate = self.schedule(task=task, weight=weight, cancellation=cancellation)
 
         while self._queue:
-            queued_task, queued_weight, queued_cancel_task = self._queue.popleft()
+            queued_task, queued_weight, queued_cancel_task, stack = self._queue.popleft()
 
             self._execute_task(
                 task=queued_task,
                 weight=queued_weight,
+                stack=stack,
                 cancellation=queued_cancel_task,
             )
 
@@ -57,7 +59,9 @@ class Trampoline(Scheduler):
         if weight is None:
             weight = 1
 
-        self._queue.append((task, weight, cancellation))
+        stack = get_frame_summary()
+
+        self._queue.append((task, weight, cancellation, stack))
         return self._create_certificates(
             weight=weight,
             stack=get_frame_summary(),

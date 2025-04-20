@@ -38,7 +38,7 @@ class init_zip[U]:
     def __new__(
         _,
         children: tuple[ContinuationMonadNode[U], ...],
-    ) -> Zip[U]: ...
+    ) -> Zip[tuple[U, ...]]: ...
 
 def init_map[U, ChildU](
     child: ContinuationMonadNode[ChildU],
