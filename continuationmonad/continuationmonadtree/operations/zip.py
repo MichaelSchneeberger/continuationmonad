@@ -15,8 +15,18 @@ class ZipState: ...
 
 
 @dataclass
-class WaitState(ZipState):
-    counter: int
+class WaitStateBase(ZipState):
+    certificates: tuple[ContinuationCertificate, ...]
+
+
+@dataclass
+class InitState(WaitStateBase):
+    pass
+
+
+@dataclass
+class WaitState(WaitStateBase):
+    certificate: ContinuationCertificate
 
 
 class OnNextState(ZipState): ...
@@ -24,18 +34,21 @@ class OnNextState(ZipState): ...
 
 class ZipAction(ABC):
     @abstractmethod
-    def get_action(self) -> ZipState: ...
+    def get_state(self) -> ZipState: ...
 
     @abstractmethod
     def get_values(self) -> tuple: ...
 
 
 @dataclass
-class BaseAction(ZipAction):
+class InitAction(ZipAction):
     counter: int
+    certificates: tuple[ContinuationCertificate, ...]
 
-    def get_action(self):
-        return WaitState(counter=self.counter)
+    def get_state(self):
+        return InitState(
+            certificates=self.certificates,
+        )
 
     def get_values(self) -> tuple:
         return tuple()
@@ -46,43 +59,50 @@ class OnNextAction[U](ZipAction):
     child: ZipAction
     value: U
 
-    def get_action(self):
-        p_node = self.child.get_action()
-
-        match p_node:
-            case WaitState(counter=1):
-                return OnNextState()
-            case WaitState(counter=counter):
-                return WaitState(counter=counter - 1)
+    def get_state(self):
+        match state := self.child.get_state():           
+            case WaitStateBase(certificates=certificates):
+                if certificates:
+                    return WaitState(
+                        certificate=certificates[0],
+                        certificates=certificates[1:],
+                    )
+                else:
+                    return OnNextState()
+            
+            case _:
+                raise Exception(f'Unexpected state {state}')
 
     def get_values(self) -> tuple:
         return self.child.get_values() + (self.value,)
 
 
 @dataclass
-class OnNextZip[U]:
-    state: ZipAction
+class ZipObserver[U]:
+    action: ZipAction
     lock: RLock
     certificates: list[ContinuationCertificate]
     on_next: Callable[[Trampoline, tuple[U, ...]], ContinuationCertificate]
 
     def __call__(self, trampoline: Trampoline, value: U):
-        node = OnNextAction(
+        action = OnNextAction(
             child=None,  # type: ignore
             value=value,
         )
 
         with self.lock:
-            node.child = self.state
-            self.state = node
+            action.child = self.action
+            self.action = action
 
-        action = node.get_action()
-
-        match action:
+        match state := action.get_state():
             case OnNextState():
-                return self.on_next(trampoline, node.get_values())
+                return self.on_next(trampoline, action.get_values())
+            
+            case WaitState(certificate=certificate):
+                return certificate
+            
             case _:
-                return self.certificates.pop()
+                raise Exception(f'Unexpected state {state}')
 
 
 class Zip[U](MultiChildrenContinuationMonadNode[U, tuple[U, ...]]):
@@ -93,17 +113,16 @@ class Zip[U](MultiChildrenContinuationMonadNode[U, tuple[U, ...]]):
         self,
         args: SubscribeArgs,
     ) -> ContinuationCertificate:
-        on_next = OnNextZip(
-            state=BaseAction(counter=len(self.children)),
+        observer = ZipObserver(
+            action=None,
             lock=RLock(),
             certificates=None,  # type: ignore
             on_next=args.on_next,
         )
-        args = args.copy(on_next=on_next)
+        args = args.copy(on_next=observer)
 
         def gen_certificates():
             for child in self.children:
-
                 def child_subscription(child=child):
                     return child.subscribe(args=args)
 
@@ -113,11 +132,11 @@ class Zip[U](MultiChildrenContinuationMonadNode[U, tuple[U, ...]]):
                     cancellation=args.cancellation,
                 )
 
-        certificates_iter = gen_certificates()
+        certificates = tuple(gen_certificates())
 
-        certificate = next(certificates_iter)
+        observer.action = InitAction(
+            counter=len(self.children),
+            certificates=certificates[1:],
+        )
 
-        # overwrite certificates attribute
-        on_next.certificates = list(certificates_iter)
-
-        return certificate
+        return certificates[0]

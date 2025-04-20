@@ -53,7 +53,7 @@ class FlatMap[U, ChildU](
 
             except Exception:
                 raise ContinuationMonadOperatorException(
-                    to_operator_exception_message(stack=self.stack)
+                    self.to_operator_exception_message(stack=self.stack)
                 )
 
             return certificate
