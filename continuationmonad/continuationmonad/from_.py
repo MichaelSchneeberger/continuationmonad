@@ -50,18 +50,18 @@ class defer[U]:
         func: Callable[[Trampoline, DeferredObserver[U]], ContinuationCertificate],
     ):
         """
-        Create a continuation monad that defers subscription until a source is specified via `connect`.
+        Create a continuation monad that defers the subscription until a source is connected.
 
-        This allows for lazy initialization of a subscription, where the actual source can be connected at a
-        later time. The provided function must return a continuation certificate to ensure the continuation chain
-        remains valid.
+        The function `func` is called when the deferred continuation monad is subscribed to.
+        Since no source is initially specified, the subscription can not propagate further upstream.
+        The function must return a continuation certificate to maintain the monadic chain's validity.
 
         Args:
-            func: A function that receives a subscription object that can be stored for later connection, and
-                must return a continuation certficat to maintain the monadic chain
+            func: A function that receives a subscriber object that can be stored for later connection, and
+                must return a continuation certficate
 
         Returns:
-            (ContinuationMonad[U]): A monad that will begin emitting elements once connected to a source
+            (ContinuationMonad[U]): A monad that will begin emitting an item once connected to a source
 
 
         ``` python

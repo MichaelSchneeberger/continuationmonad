@@ -26,7 +26,7 @@ class Connect[U](SingleChildContinuationMonadNode[tuple[ContinuationCertificate,
                     def request_next_item(observer=observer):
                         return observer.on_next(n_trampoline, value)
                     
-                    yield n_trampoline.schedule(request_next_item, weight=args.weight)
+                    yield n_trampoline.schedule(request_next_item, weight=observer.weight)
 
             certificates = tuple(gen_certificates())
 

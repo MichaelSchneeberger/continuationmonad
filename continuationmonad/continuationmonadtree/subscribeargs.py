@@ -45,12 +45,9 @@ class SubscribeArgs[U]:
 def init_subscribe_args(
     on_next: Callable[[Trampoline, Any], ContinuationCertificate],
     trampoline: Trampoline,
-    weight: int | None = None,
+    weight: int,
     cancellation: Cancellation | None = None,
 ):
-    if weight is None:
-        weight = 1
-
     return SubscribeArgs(
         on_next=on_next,
         weight=weight,

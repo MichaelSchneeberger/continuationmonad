@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from threading import RLock
 from typing import Callable
 
-from continuationmonad.exceptions import ContinuationMonadOperatorException, ContinuationMonadSchedulerException
+from continuationmonad.exceptions import ContinuationMonadOperatorException
 from continuationmonad.cancellation import Cancellation
 from continuationmonad.continuationcertificate import (
     ContinuationCertificate,

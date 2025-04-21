@@ -35,6 +35,9 @@ class Trampoline(Scheduler):
         weight: int | None = None,
         cancellation: Cancellation | None = None,
     ):
+        if weight is None:
+            weight = 1
+
         first_certificate = self.schedule(task=task, weight=weight, cancellation=cancellation)
 
         while self._queue:
@@ -53,16 +56,15 @@ class Trampoline(Scheduler):
     def schedule(
         self,
         task: Callable[[], ContinuationCertificate],
-        weight: int | None = None,
+        weight: int,
         cancellation: Cancellation | None = None,
     ):
-        if weight is None:
-            weight = 1
-
         stack = get_frame_summary()
 
         self._queue.append((task, weight, cancellation, stack))
+
         return self._create_certificates(
             weight=weight,
             stack=get_frame_summary(),
         )
+

@@ -16,9 +16,11 @@ class FromValue[U](ContinuationMonadNode[U]):
         self,
         args: SubscribeArgs,
     ):
-        def task():
-            return args.on_next(args.trampoline, self.value)
+        return args.on_next(args.trampoline, self.value)
 
-        return args.trampoline.schedule(
-            task=task, weight=args.weight, cancellation=args.cancellation
-        )
+        # def task():
+        #     return args.on_next(args.trampoline, self.value)
+
+        # return args.trampoline.schedule(
+        #     task=task, weight=args.weight, cancellation=args.cancellation
+        # )
