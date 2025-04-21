@@ -1,6 +1,3 @@
-# from continuationmonad.schedulers.data.cancellable import (
-#     init_cancellation_state as _init_cancellable,
-# )
 from continuationmonad.schedulers.init import (
     init_main_trampoline as _init_main_trampoline,
     # init_trampoline as _init_trampoline,
@@ -21,6 +18,7 @@ from continuationmonad.continuationmonad.from_ import (
     schedule_trampoline as _schedule_trampoline,
     tail_rec as _tail_rec,
 )
+from continuationmonad.continuationmonad.to import fork as _fork
 
 init_subscribe_args = _init_subscribe_args
 
@@ -48,6 +46,12 @@ tail_rec = _tail_rec
 # accumulate = _accumulate
 defer = _defer
 zip = _zip
+
+
+# Fork continuation monad on trampoline
+#######################################
+
+fork = _fork
 
 
 # Implement your own operator

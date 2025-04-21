@@ -1,15 +1,13 @@
 from abc import ABC, abstractmethod
 
-from continuationmonad.cancellation import Cancellation
-from continuationmonad.continuationmonadtree.subscribeargs import (
-    SubscribeArgs,
-    init_subscribe_args,
-)
 from continuationmonad.continuationcertificate import (
     ContinuationCertificate,
 )
 from continuationmonad.schedulers.init import init_main_trampoline
-from continuationmonad.schedulers.trampoline import Trampoline
+from continuationmonad.continuationmonadtree.subscribeargs import (
+    SubscribeArgs,
+    init_subscribe_args,
+)
 
 
 class ContinuationMonadNode[U](ABC):
@@ -18,24 +16,6 @@ class ContinuationMonadNode[U](ABC):
         self,
         args: SubscribeArgs,
     ) -> ContinuationCertificate: ...
-
-    def run_on_trampoline(
-        self,
-        trampoline: Trampoline,
-        weight: int,
-        cancellation: Cancellation | None,
-    ) -> ContinuationCertificate:
-        args = init_subscribe_args(
-            on_next=lambda _, c: c,
-            trampoline=trampoline,
-            cancellation=cancellation,
-            weight=weight,
-        )
-
-        def trampoline_task():
-            return self.subscribe(args=args)
-
-        return trampoline.schedule(trampoline_task, weight=weight)
     
     def run(self):
         trampoline = init_main_trampoline()

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import Callable, Generator, override
+from typing import Callable, Generator, Iterable, override
 
 from continuationmonad.utils.framesummary import get_frame_summary
 from continuationmonad.cancellation import Cancellation
@@ -36,18 +36,6 @@ class ContinuationMonad[U](SingleChildContinuationMonadNode[U, U]):
     ):
         return self.child.subscribe(args=args)
 
-    def run_on_trampoline(
-        self,
-        trampoline: Trampoline,
-        weight: int,
-        cancellation: Cancellation | None,
-    ) -> ContinuationCertificate:
-        return self.child.run_on_trampoline(
-            trampoline=trampoline,
-            weight=weight,
-            cancellation=cancellation,
-        )
-
     def run(self):
         return self.child.run()
 
@@ -57,7 +45,7 @@ class ContinuationMonad[U](SingleChildContinuationMonadNode[U, U]):
     # operations
     ############
 
-    def connect(self, observers: tuple[DeferredObserver, ...]):
+    def connect(self, observers: Iterable[DeferredObserver]):
         return self.copy(
             child=init_connect(child=self.child, observers=observers)
         )

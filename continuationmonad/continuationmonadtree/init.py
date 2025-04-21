@@ -1,4 +1,4 @@
-from typing import Any, Callable
+from typing import Any, Callable, Iterable
 from dataclassabc import dataclassabc
 
 from continuationmonad.utils.framesummary import FrameSummary
@@ -23,6 +23,19 @@ from continuationmonad.continuationmonadtree.sources.gettrampoline import (
 )
 from continuationmonad.continuationmonadtree.operations.map import Map
 from continuationmonad.continuationmonadtree.sources.fromvalue import FromValue
+
+
+@dataclassabc(frozen=True)
+class ConnectImpl(Connect):
+    child: ContinuationMonadNode
+    observers: Iterable[DeferredObserver]
+
+
+def init_connect(child, observers):
+    return ConnectImpl(
+        child=child,
+        observers=observers,
+    )
 
 
 @dataclassabc(frozen=True)
@@ -74,10 +87,18 @@ class ZipImpl[_](Zip):
     children: tuple[ContinuationMonadNode, ...]
 
 
-def init_zip(children: tuple[ContinuationMonadNode, ...]):
-    assert 1 <= len(children)
+def init_zip(children: Iterable[ContinuationMonadNode]):
+    children = tuple(children)
 
-    return ZipImpl(children=children)
+    match len(children):
+        case 0:
+            raise AssertionError('No continuation monads provided. Cannot create a continuation monad.')
+        
+        case 1:
+            return children
+        
+        case _:
+            return ZipImpl(children=children)
 
 
 @dataclassabc(frozen=True)
@@ -102,19 +123,6 @@ class FromValueImpl[_](FromValue):
 
 def init_from_value(value):
     return FromValueImpl(value)
-
-
-@dataclassabc(frozen=True)
-class ConnectImpl(Connect):
-    child: ContinuationMonadNode
-    observers: tuple[DeferredObserver, ...]
-
-
-def init_connect(child, observers):
-    return ConnectImpl(
-        child=child,
-        observers=observers,
-    )
 
 
 @dataclassabc(frozen=True)

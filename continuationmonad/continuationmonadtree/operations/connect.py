@@ -1,4 +1,5 @@
 from abc import abstractmethod
+from typing import Iterable
 
 from continuationmonad.continuationmonadtree.deferredobserver import DeferredObserver
 from continuationmonad.continuationmonadtree.subscribeargs import SubscribeArgs
@@ -13,7 +14,7 @@ class Connect[U](SingleChildContinuationMonadNode[tuple[ContinuationCertificate,
 
     @property
     @abstractmethod
-    def observers(self) -> tuple[DeferredObserver, ...]: ...
+    def observers(self) -> Iterable[DeferredObserver]: ...
 
     def subscribe(
         self,

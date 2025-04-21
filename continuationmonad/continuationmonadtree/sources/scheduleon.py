@@ -19,20 +19,23 @@ class ScheduleOn(ContinuationMonadNode[None]):
         self,
         args: SubscribeArgs,
     ):
-        def schedule_item():
-            if isinstance(self.scheduler, Trampoline):
-                return args.on_next(self.scheduler, self.scheduler)
-
-            else:
-                trampoline = init_trampoline()
-
-                def trampoline_item():
-                    return args.on_next(trampoline, self.scheduler)
-
-                return trampoline.run(
-                    trampoline_item, weight=args.weight, cancellation=args.cancellation
+        match self.scheduler:
+            case Trampoline() as trampoline:
+                def trampoline_task():
+                    return args.on_next(trampoline, trampoline)
+                
+                return trampoline.schedule(
+                    task=trampoline_task, weight=args.weight, cancellation=args.cancellation
                 )
 
-        return self.scheduler.schedule(
-            task=schedule_item, weight=args.weight, cancellation=args.cancellation
-        )
+            case _:
+                def schedule_task():
+                    trampoline = init_trampoline()
+
+                    return trampoline.run(
+                        trampoline_task, weight=args.weight, cancellation=args.cancellation
+                    )
+
+                return self.scheduler.schedule(
+                    task=schedule_task, weight=args.weight, cancellation=args.cancellation
+                )
