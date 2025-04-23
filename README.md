@@ -7,8 +7,7 @@ A Python library implementing stack-safe continuations based on schedulers, ensu
 ## Features
 
 * **Trampoline-based**: Stack-safe execution of the continuation monad through trampolining
-* **Reactive architecture**: Ressembling an rx observable emitting a single item
-* **Deadlock prevention**: Continuation certificates ensure execution flow integrity
+* **Continuation certificate**: The execution of the continuation monad is guaranteed to finish, which introduces a small computational overhead
 * **Scheduler-based**: Explicit control over execution context through different scheduler implementations
 * **Composable operations**: Monadic operators for clean functional pipelines
 
@@ -44,10 +43,9 @@ result = count_down(5).run()
 
 ## Schedulers and Trampolines
 
-A *Scheduler* is an abstract base class (ABC) that defines the core execution interface for managing continuations.
+A `Scheduler` is an abstract base class (ABC) that defines the core execution interface for managing continuations.
 It defines an abstract `schedule` method that enqueues a task for execution.
- <!-- a task to the internal queue of the scheduler. -->
-To prevent continuation deadlocks, the scheduled task must return a *continuation certificate*.
+To prevent continuation deadlocks, the scheduled task must return a *continuation certificate*, which can only be obtained by scheduling another task.
 ``` python
 class Scheduler:
     def schedule(
@@ -57,29 +55,29 @@ class Scheduler:
     ) -> ContinuationCertificate: ...
 ```
 
-A *Trampoline* is a concrete implementation of a scheduler. 
+A `Trampoline` is a concrete implementation of a scheduler. 
 It uses a simple while loop to process tasks until its internal queue is exhausted.
 Continuations run within a dedicated Trampoline, that can be accessed using the `get_trampline` operator.
 When using the `schedule_on` method, a Trampoline is nested within another scheduler.
 
 
-## Continuation Deadlocks
+### Continuation Certificates
 
 Scheduling continuations across multiple threads can lead to continuation deadlocks, where a continuation never produces a result.
 These deadlocks are particularly difficult to debug when the continuation chain includes third-party operators that may be poorly tested or unpredictable.
-To mitigate this, the system enforces the use of continuation certificates.
+To mitigate this, the system enforces the use of *continuation certificates* when scheduling tasks.
 A continuation certificate:
 - Must be returned by a scheduled task
-- Implements a verify() method that can be called exactly once
-- Can only be created by invoking the schedule method of a scheduler
-This design guarantees that the only way to complete a scheduled task is by scheduling another task—ensuring progress and avoiding deadlocks by construction.
+- Implements a `verify` method that can be called exactly once
+- Can only be created by invoking the `schedule` method of a scheduler
 
-A continuation certificate represents proof that a continuation has been properly scheduled and will eventually complete.  
+This design guarantees that the only way to complete a scheduled task is by scheduling another task—ensuring progress and avoiding deadlocks by construction.
+A continuation certificate represents proof that a process is running and can only complete when verifying the certificate.
 Each certificate carries a `weight` attribute, which indicates the *logical multiplicity* of the task's execution.
-Although a task is physically executed only once, a weight greater than 1 models the task as being *virtually* executed in parallel that many times.  
-This is useful for balancing, composing, or distributing continuation chains in advanced scheduling scenarios.
+Although a task is physically executed only once, a weight greater than 1 models the task as being *virtually* executed in parallel that many times.
+<!-- This is useful for balancing, composing, or distributing continuation chains in advanced scheduling scenarios.
 Multiple continuation certificates can be merged into a single one.
-A certificate with a multiplicity greater than 1 can be split into multiple certificates.
+A certificate with a multiplicity greater than 1 can be split into multiple certificates. -->
 
 ## Operations
 
