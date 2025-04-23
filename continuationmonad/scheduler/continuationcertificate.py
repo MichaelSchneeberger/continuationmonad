@@ -1,5 +1,5 @@
 from __future__ import annotations
-from threading import RLock
+from threading import Lock
 
 from continuationmonad.exceptions import ContinuationMonadOperatorException
 from continuationmonad.utils.framesummary import FrameSummaryMixin, FrameSummary, get_frame_summary
@@ -8,7 +8,7 @@ from continuationmonad.utils.framesummary import FrameSummaryMixin, FrameSummary
 class ContinuationCertificate(FrameSummaryMixin):
     __permission__ = False
 
-    def __init__(self, lock: RLock, weight: int, stack: tuple[FrameSummary, ...]):
+    def __init__(self, lock: Lock, weight: int, stack: tuple[FrameSummary, ...]):
         assert self.__permission__, (
             "A certificate should uniquely be created by a scheduler implementation."
         )

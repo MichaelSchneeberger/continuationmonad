@@ -1,12 +1,12 @@
 from typing import Callable, overload
 
-from continuationmonad.cancellation import Cancellation
-from continuationmonad.continuationcertificate import (
+from continuationmonad.scheduler.cancellation import Cancellation
+from continuationmonad.scheduler.continuationcertificate import (
     ContinuationCertificate,
 )
 from continuationmonad.utils.framesummary import FrameSummary
 
-class Scheduler:
+class InstantScheduler:
     @overload
     def schedule(
         self,
@@ -20,7 +20,7 @@ class Scheduler:
         weight: int,
         cancellation: Cancellation | None,
     ) -> ContinuationCertificate: ...
-    def _create_certificates(
+    def _create_certificate(
         self, 
         weight: int, 
         stack: tuple[FrameSummary, ...]

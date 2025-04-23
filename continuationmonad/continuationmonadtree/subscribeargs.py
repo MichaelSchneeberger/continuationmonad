@@ -1,9 +1,9 @@
 from dataclasses import dataclass, replace
 from typing import Any, Callable
 
-from continuationmonad.cancellation import Cancellation
-from continuationmonad.continuationcertificate import ContinuationCertificate
-from continuationmonad.schedulers.trampoline import Trampoline
+from continuationmonad.scheduler.cancellation import Cancellation
+from continuationmonad.scheduler.continuationcertificate import ContinuationCertificate
+from continuationmonad.scheduler.schedulers.trampoline import Trampoline
 
 
 @dataclass

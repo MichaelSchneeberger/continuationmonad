@@ -1,8 +1,8 @@
 from abc import abstractmethod
 
-from continuationmonad.schedulers.init import init_trampoline
-from continuationmonad.schedulers.scheduler import Scheduler
-from continuationmonad.schedulers.trampoline import Trampoline
+from continuationmonad.scheduler.init import init_trampoline
+from continuationmonad.scheduler.instantscheduler import InstantScheduler
+from continuationmonad.scheduler.schedulers.trampoline import Trampoline
 from continuationmonad.continuationmonadtree.subscribeargs import SubscribeArgs
 from continuationmonad.continuationmonadtree.nodes import ContinuationMonadNode
 
@@ -13,29 +13,47 @@ class ScheduleOn(ContinuationMonadNode[None]):
 
     @property
     @abstractmethod
-    def scheduler(self) -> Scheduler: ...
+    def scheduler(self) -> InstantScheduler: ...
 
     def subscribe(
         self,
         args: SubscribeArgs,
     ):
+        # def trampoline_task():
         match self.scheduler:
             case Trampoline() as trampoline:
+
                 def trampoline_task():
                     return args.on_next(trampoline, trampoline)
-                
+
                 return trampoline.schedule(
-                    task=trampoline_task, weight=args.weight, cancellation=args.cancellation
+                    task=trampoline_task,
+                    weight=args.weight,
+                    cancellation=args.cancellation,
                 )
 
             case _:
+
                 def schedule_task():
                     trampoline = init_trampoline()
 
+                    def trampoline_task():
+                        return args.on_next(trampoline, trampoline)
+
                     return trampoline.run(
-                        trampoline_task, weight=args.weight, cancellation=args.cancellation
+                        trampoline_task,
+                        weight=args.weight,
+                        cancellation=args.cancellation,
                     )
 
                 return self.scheduler.schedule(
-                    task=schedule_task, weight=args.weight, cancellation=args.cancellation
+                    task=schedule_task,
+                    weight=args.weight,
+                    cancellation=args.cancellation,
                 )
+
+        # return args.trampoline.schedule(
+        #     task=trampoline_task,
+        #     weight=args.weight,
+        #     cancellation=args.cancellation,
+        # )

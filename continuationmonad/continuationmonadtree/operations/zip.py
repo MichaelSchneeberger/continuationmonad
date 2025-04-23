@@ -3,13 +3,16 @@ from typing import Callable
 from dataclasses import dataclass
 from threading import RLock
 
-from continuationmonad.continuationcertificate import ContinuationCertificate
-from continuationmonad.schedulers.trampoline import Trampoline
+from continuationmonad.scheduler.continuationcertificate import ContinuationCertificate
+from continuationmonad.scheduler.schedulers.trampoline import Trampoline
 from continuationmonad.continuationmonadtree.subscribeargs import SubscribeArgs
 from continuationmonad.continuationmonadtree.nodes import (
     MultiChildrenContinuationMonadNode,
 )
 
+
+# States
+########
 
 class ZipState: ...
 
@@ -32,7 +35,10 @@ class WaitState(WaitStateBase):
 class OnNextState(ZipState): ...
 
 
-class ZipAction(ABC):
+# Transitions
+#############
+
+class ZipTransition(ABC):
     @abstractmethod
     def get_state(self) -> ZipState: ...
 
@@ -41,7 +47,7 @@ class ZipAction(ABC):
 
 
 @dataclass
-class InitAction(ZipAction):
+class InitTransition(ZipTransition):
     counter: int
     certificates: tuple[ContinuationCertificate, ...]
 
@@ -55,8 +61,8 @@ class InitAction(ZipAction):
 
 
 @dataclass
-class OnNextAction[U](ZipAction):
-    child: ZipAction
+class OnNextTransition[U](ZipTransition):
+    child: ZipTransition
     value: U
 
     def get_state(self):
@@ -79,13 +85,13 @@ class OnNextAction[U](ZipAction):
 
 @dataclass
 class ZipObserver[U]:
-    action: ZipAction
+    action: ZipTransition
     lock: RLock
     certificates: list[ContinuationCertificate]
     on_next: Callable[[Trampoline, tuple[U, ...]], ContinuationCertificate]
 
     def __call__(self, trampoline: Trampoline, value: U):
-        action = OnNextAction(
+        action = OnNextTransition(
             child=None,  # type: ignore
             value=value,
         )
@@ -134,7 +140,7 @@ class Zip[U](MultiChildrenContinuationMonadNode[U, tuple[U, ...]]):
 
         certificates = tuple(gen_certificates())
 
-        observer.action = InitAction(
+        observer.action = InitTransition(
             counter=len(self.children),
             certificates=certificates[1:],
         )

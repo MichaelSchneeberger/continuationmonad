@@ -3,12 +3,12 @@ from typing import Callable
 
 from continuationmonad.continuationmonadtree.deferredobserver import DeferredObserver
 from continuationmonad.exceptions import ContinuationMonadOperatorException
-from continuationmonad.continuationcertificate import (
+from continuationmonad.scheduler.continuationcertificate import (
     ContinuationCertificate,
 )
 from continuationmonad.continuationmonadtree.subscribeargs import SubscribeArgs
 from continuationmonad.continuationmonadtree.nodes import ContinuationMonadNode
-from continuationmonad.schedulers.trampoline import Trampoline
+from continuationmonad.scheduler.schedulers.trampoline import Trampoline
 from continuationmonad.utils.framesummary import FrameSummaryMixin
 
 

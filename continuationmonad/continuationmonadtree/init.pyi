@@ -1,11 +1,11 @@
 from typing import Callable, Iterable
 
 from continuationmonad.utils.framesummary import FrameSummary
-from continuationmonad.continuationcertificate import (
+from continuationmonad.scheduler.continuationcertificate import (
     ContinuationCertificate,
 )
-from continuationmonad.schedulers.scheduler import Scheduler
-from continuationmonad.schedulers.trampoline import Trampoline
+from continuationmonad.scheduler.instantscheduler import InstantScheduler
+from continuationmonad.scheduler.schedulers.trampoline import Trampoline
 from continuationmonad.continuationmonadtree.deferredobserver import DeferredObserver
 from continuationmonad.continuationmonadtree.nodes import ContinuationMonadNode
 from continuationmonad.continuationmonadtree.operations.zip import Zip
@@ -44,7 +44,7 @@ def init_map[U, ChildU](
     stack: tuple[FrameSummary, ...],
 ) -> Map[U, ChildU]: ...
 def init_schedule_on(
-    scheduler: Scheduler,
+    scheduler: InstantScheduler,
 ) -> ScheduleOn: ...
 
 class init_zip[U]:

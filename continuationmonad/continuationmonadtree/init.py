@@ -2,11 +2,11 @@ from typing import Any, Callable, Iterable
 from dataclassabc import dataclassabc
 
 from continuationmonad.utils.framesummary import FrameSummary
-from continuationmonad.continuationcertificate import (
+from continuationmonad.scheduler.continuationcertificate import (
     ContinuationCertificate,
 )
-from continuationmonad.schedulers.scheduler import Scheduler
-from continuationmonad.schedulers.trampoline import Trampoline
+from continuationmonad.scheduler.instantscheduler import InstantScheduler
+from continuationmonad.scheduler.schedulers.trampoline import Trampoline
 from continuationmonad.continuationmonadtree.deferredobserver import DeferredObserver
 from continuationmonad.continuationmonadtree.nodes import ContinuationMonadNode
 from continuationmonad.continuationmonadtree.operations.zip import Zip
@@ -127,11 +127,11 @@ def init_from_value(value):
 
 @dataclassabc(frozen=True)
 class ScheduleOnImpl(ScheduleOn):
-    scheduler: Scheduler
+    scheduler: InstantScheduler
 
 
 def init_schedule_on(
-    scheduler: Scheduler,
+    scheduler: InstantScheduler,
 ):
     return ScheduleOnImpl(
         scheduler=scheduler,

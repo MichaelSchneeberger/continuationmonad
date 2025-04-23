@@ -1,10 +1,10 @@
 from continuationmonad.utils.framesummary import (
     FrameSummaryMixin as _FrameSummaryMixin,
 )
-from continuationmonad.cancellation import (
+from continuationmonad.scheduler.cancellation import (
     Cancellation as _Cancellation,
 )
-from continuationmonad.continuationcertificate import (
+from continuationmonad.scheduler.continuationcertificate import (
     ContinuationCertificate as _ContinuationCertificate,
 )
 from continuationmonad.continuationmonadtree.subscribeargs import (

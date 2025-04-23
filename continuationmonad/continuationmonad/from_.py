@@ -11,11 +11,11 @@ from continuationmonad.continuationmonadtree.init import (
     init_defer,
     init_schedule_on,
 )
-from continuationmonad.continuationcertificate import (
+from continuationmonad.scheduler.continuationcertificate import (
     ContinuationCertificate,
 )
-from continuationmonad.schedulers.scheduler import Scheduler
-from continuationmonad.schedulers.trampoline import Trampoline
+from continuationmonad.scheduler.instantscheduler import InstantScheduler
+from continuationmonad.scheduler.schedulers.trampoline import Trampoline
 from continuationmonad.utils.framesummary import get_frame_summary
 
 
@@ -103,7 +103,7 @@ def get_trampoline():
     return init_continuation_monad(init_get_trampoline())
 
 
-def schedule_on(scheduler: Scheduler):
+def schedule_on(scheduler: InstantScheduler):
     return init_continuation_monad(init_schedule_on(scheduler=scheduler))
 
 

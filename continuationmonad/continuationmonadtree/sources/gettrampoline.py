@@ -1,4 +1,4 @@
-from continuationmonad.schedulers.trampoline import Trampoline
+from continuationmonad.scheduler.schedulers.trampoline import Trampoline
 from continuationmonad.continuationmonadtree.subscribeargs import SubscribeArgs
 from continuationmonad.continuationmonadtree.nodes import ContinuationMonadNode
 
@@ -13,9 +13,11 @@ class GetTrampoline(ContinuationMonadNode[Trampoline]):
     ):
         return args.on_next(args.trampoline, args.trampoline)
 
-        # def task():
+        # def trampoline_task():
         #     return args.on_next(args.trampoline, args.trampoline)
 
         # return args.trampoline.schedule(
-        #     task=task, weight=args.weight, cancellation=args.cancellation
+        #     task=trampoline_task,
+        #     weight=args.weight,
+        #     cancellation=args.cancellation,
         # )

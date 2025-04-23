@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from continuationmonad.continuationcertificate import ContinuationCertificate
+from continuationmonad.scheduler.continuationcertificate import ContinuationCertificate
 
 
 class Cancellation(ABC):

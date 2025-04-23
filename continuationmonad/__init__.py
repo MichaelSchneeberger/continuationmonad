@@ -1,6 +1,8 @@
-from continuationmonad.schedulers.init import (
-    init_main_trampoline as _init_main_trampoline,
-    # init_trampoline as _init_trampoline,
+from continuationmonad.scheduler.init import (
+    init_current_thread_scheduler as _init_current_thread_scheduler,
+    init_event_loop_scheduler as _init_event_loop_scheduler,
+    init_main_scheduler as _init_main_scheduler,
+    init_trampoline as _init_trampoline,
 )
 from continuationmonad.continuationmonadtree.subscribeargs import (
     init_subscribe_args as _init_subscribe_args,
@@ -9,7 +11,6 @@ from continuationmonad.continuationmonad.init import (
     init_continuation_monad as _init_continuation_monad,
 )
 from continuationmonad.continuationmonad.from_ import (
-    # accumulate as _accumulate,
     defer as _defer,
     get_trampoline as _get_trampoline,
     from_ as _from_value,
@@ -20,14 +21,17 @@ from continuationmonad.continuationmonad.from_ import (
 )
 from continuationmonad.continuationmonad.to import fork as _fork
 
+
 init_subscribe_args = _init_subscribe_args
 
 
 # Schedulers
 ############
 
-init_trampoline = _init_main_trampoline
-init_main_trampoline = _init_main_trampoline
+init_current_thread_scheduler = _init_current_thread_scheduler
+init_event_loop_scheduler = _init_event_loop_scheduler
+init_main_scheduler = _init_main_scheduler
+init_trampoline = _init_trampoline
 
 
 # Create continuation source

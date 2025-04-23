@@ -18,9 +18,11 @@ class FromValue[U](ContinuationMonadNode[U]):
     ):
         return args.on_next(args.trampoline, self.value)
 
-        # def task():
+        # def trampoline_task():
         #     return args.on_next(args.trampoline, self.value)
 
         # return args.trampoline.schedule(
-        #     task=task, weight=args.weight, cancellation=args.cancellation
+        #     task=trampoline_task,
+        #     weight=args.weight,
+        #     cancellation=args.cancellation,
         # )

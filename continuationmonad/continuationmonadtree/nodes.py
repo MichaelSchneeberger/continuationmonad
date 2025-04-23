@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
 
-from continuationmonad.continuationcertificate import (
+from continuationmonad.scheduler.continuationcertificate import (
     ContinuationCertificate,
 )
-from continuationmonad.schedulers.init import init_main_trampoline
+from continuationmonad.scheduler.init import init_main_scheduler, init_trampoline
 from continuationmonad.continuationmonadtree.subscribeargs import (
     SubscribeArgs,
     init_subscribe_args,
@@ -18,13 +18,14 @@ class ContinuationMonadNode[U](ABC):
     ) -> ContinuationCertificate: ...
     
     def run(self):
-        trampoline = init_main_trampoline()
+        main_scheduler = init_main_scheduler()
+        trampoline = init_trampoline()
 
         result = [None]
 
         def on_next(_, value):
             result[0] = value
-            return trampoline.stop()
+            return main_scheduler.stop()
 
         args = init_subscribe_args(
             on_next=on_next,
@@ -32,10 +33,12 @@ class ContinuationMonadNode[U](ABC):
             weight=1,
         )
 
-        def trampoline_task():
-            return self.subscribe(args=args)
+        def schedule_task():
+            def trampoline_task():
+                return self.subscribe(args=args)
 
-        trampoline.run(trampoline_task)
+            return trampoline.run(trampoline_task, weight=1)
+        main_scheduler.run(schedule_task)
 
         return result[0]
 

@@ -1,19 +1,17 @@
 from abc import ABC, abstractmethod
-from threading import RLock
+from threading import Lock
 from typing import Callable
 
-from continuationmonad.exceptions import ContinuationMonadOperatorException
-from continuationmonad.cancellation import Cancellation
-from continuationmonad.continuationcertificate import (
-    ContinuationCertificate,
-)
 from continuationmonad.utils.framesummary import FrameSummary, to_operator_traceback
+from continuationmonad.exceptions import ContinuationMonadOperatorException
+from continuationmonad.scheduler.cancellation import Cancellation
+from continuationmonad.scheduler.continuationcertificate import ContinuationCertificate
 
 
-class Scheduler(ABC):
-    @property
-    @abstractmethod
-    def lock(self) -> RLock: ...
+class InstantScheduler(ABC):
+    # @property
+    # @abstractmethod
+    # def lock(self) -> RLock: ...
 
     @abstractmethod
     def schedule(
@@ -51,7 +49,7 @@ class Scheduler(ABC):
                 f"\n{traceback_msg}"
             )
 
-    def _create_certificates(
+    def _create_certificate(
         self,
         weight: int,
         stack: tuple[FrameSummary, ...],
@@ -61,4 +59,4 @@ class Scheduler(ABC):
             ContinuationCertificate.__mro__,
             ContinuationCertificate.__dict__ | {"__permission__": True},
         )
-        return _ContinuationCertificate(lock=self.lock, weight=weight, stack=stack)
+        return _ContinuationCertificate(lock=Lock(), weight=weight, stack=stack)

@@ -5,7 +5,7 @@ from continuationmonad.exceptions import ContinuationMonadOperatorException
 from continuationmonad.utils.framesummary import (
     FrameSummaryMixin,
 )
-from continuationmonad.schedulers.trampoline import Trampoline
+from continuationmonad.scheduler.schedulers.trampoline import Trampoline
 from continuationmonad.continuationmonadtree.subscribeargs import SubscribeArgs
 from continuationmonad.continuationmonadtree.nodes import (
     SingleChildContinuationMonadNode,

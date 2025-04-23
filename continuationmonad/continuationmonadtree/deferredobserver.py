@@ -1,11 +1,11 @@
 from dataclasses import dataclass
 from typing import Callable
 
-from continuationmonad.cancellation import Cancellation
-from continuationmonad.continuationcertificate import (
+from continuationmonad.scheduler.cancellation import Cancellation
+from continuationmonad.scheduler.continuationcertificate import (
     ContinuationCertificate,
 )
-from continuationmonad.schedulers.trampoline import Trampoline
+from continuationmonad.scheduler.schedulers.trampoline import Trampoline
 
 
 @dataclass
