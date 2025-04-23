@@ -31,18 +31,18 @@ def init_defer[U](
     func: Callable[[Trampoline, DeferredObserver[U]], ContinuationCertificate],
     stack: tuple[FrameSummary, ...],
 ) -> Defer[U]: ...
-def init_flat_map[U, ChildU](
-    child: ContinuationMonadNode[ChildU],
-    func: Callable[[ChildU], ContinuationMonadNode[U]],
+def init_flat_map[U, V](
+    child: ContinuationMonadNode[U],
+    func: Callable[[U], ContinuationMonadNode[V]],
     stack: tuple[FrameSummary, ...],
-) -> FlatMap[U, ChildU]: ...
+) -> FlatMap[U, V]: ...
 def init_from_value[U](value: U) -> FromValue[U]: ...
 def init_get_trampoline() -> GetTrampoline: ...
-def init_map[U, ChildU](
-    child: ContinuationMonadNode[ChildU],
-    func: Callable[[ChildU], U],
+def init_map[U, V](
+    child: ContinuationMonadNode[U],
+    func: Callable[[U], V],
     stack: tuple[FrameSummary, ...],
-) -> Map[U, ChildU]: ...
+) -> Map[U, V]: ...
 def init_schedule_on(
     scheduler: InstantScheduler,
 ) -> ScheduleOn: ...

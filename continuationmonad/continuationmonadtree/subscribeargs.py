@@ -20,9 +20,9 @@ class SubscribeArgs[U]:
     # ensure that no item is emitted before subscribe method returns
     trampoline: Trampoline
 
-    def copy(
+    def copy[V](
         self, /, 
-        on_next: Callable[[Trampoline, U], ContinuationCertificate] | None = None, 
+        on_next: Callable[[Trampoline, V], ContinuationCertificate] | None = None, 
         cancellation: Cancellation | None = None,
         trampoline: Trampoline | None = None,
         weight: int | None = None,

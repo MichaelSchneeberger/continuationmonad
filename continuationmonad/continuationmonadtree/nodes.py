@@ -10,21 +10,21 @@ from continuationmonad.continuationmonadtree.subscribeargs import (
 )
 
 
-class ContinuationMonadNode[U](ABC):
+class ContinuationMonadNode[V](ABC):
     @abstractmethod
     def subscribe(
         self,
-        args: SubscribeArgs,
+        args: SubscribeArgs[V],
     ) -> ContinuationCertificate: ...
     
-    def run(self):
+    def run(self) -> V:
         main_scheduler = init_main_scheduler()
         trampoline = init_trampoline()
 
-        result = [None]
+        result = []
 
         def on_next(_, value):
-            result[0] = value
+            result.append(value)
             return main_scheduler.stop()
 
         args = init_subscribe_args(
@@ -43,17 +43,17 @@ class ContinuationMonadNode[U](ABC):
         return result[0]
 
 
-class SingleChildContinuationMonadNode[U, ChildU](ContinuationMonadNode[U]):
+class SingleChildContinuationMonadNode[U, V](ContinuationMonadNode[V]):
     """
     Represents a continuation monad node with a single child.
     """
 
     @property
     @abstractmethod
-    def child(self) -> ContinuationMonadNode[ChildU]: ...
+    def child(self) -> ContinuationMonadNode[U]: ...
 
 
-class TwoChildrenContinuationMonadNode[U, L, R](ContinuationMonadNode[U]):
+class TwoChildrenContinuationMonadNode[L, R, U](ContinuationMonadNode[U]):
     """
     Represents a continuation monad node with two children.
     """
@@ -67,11 +67,11 @@ class TwoChildrenContinuationMonadNode[U, L, R](ContinuationMonadNode[U]):
     def right(self) -> ContinuationMonadNode[R]: ...
 
 
-class MultiChildrenContinuationMonadNode[U, UChild](ContinuationMonadNode[U]):
+class MultiChildrenContinuationMonadNode[U, V](ContinuationMonadNode[V]):
     """
     Represents a continuation monad node with many children.
     """
 
     @property
     @abstractmethod
-    def children(self) -> tuple[ContinuationMonadNode[UChild], ...]: ...
+    def children(self) -> tuple[ContinuationMonadNode[U], ...]: ...

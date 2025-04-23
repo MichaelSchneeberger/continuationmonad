@@ -13,21 +13,21 @@ from continuationmonad.continuationmonadtree.nodes import (
 )
 
 
-class FlatMap[U, ChildU](
-    FrameSummaryMixin, SingleChildContinuationMonadNode[U, ChildU]
+class FlatMap[U, V](
+    FrameSummaryMixin, SingleChildContinuationMonadNode[U, V]
 ):
     def __str__(self) -> str:
         return f"flat_map({self.child}, {self.func})"
 
     @property
     @abstractmethod
-    def func(self) -> Callable[[ChildU], ContinuationMonadNode[U]]: ...
+    def func(self) -> Callable[[U], ContinuationMonadNode[V]]: ...
 
     def subscribe(
         self,
         args: SubscribeArgs,
     ):
-        def n_on_next(n_trampoline: Trampoline, value: ChildU):
+        def n_on_next(n_trampoline: Trampoline, value: U):
 
             try:
                 continuation = self.func(value)

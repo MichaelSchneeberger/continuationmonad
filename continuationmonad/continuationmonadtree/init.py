@@ -1,4 +1,4 @@
-from typing import Any, Callable, Iterable
+from typing import Callable, Iterable
 from dataclassabc import dataclassabc
 
 from continuationmonad.utils.framesummary import FrameSummary
@@ -57,13 +57,13 @@ def init_defer(
 @dataclassabc(frozen=True)
 class FlatMapImpl[_, __](FlatMap):
     child: ContinuationMonadNode
-    func: Callable[[Any], ContinuationMonadNode]
+    func: Callable[[None], ContinuationMonadNode]
     stack: tuple[FrameSummary, ...]
 
 
 def init_flat_map(
     child: ContinuationMonadNode,
-    func: Callable[[Any], ContinuationMonadNode],
+    func: Callable[[None], ContinuationMonadNode],
     stack: tuple[FrameSummary, ...],
 ):
     return FlatMapImpl(
@@ -118,7 +118,7 @@ def init_map(child, func, stack):
 
 @dataclassabc(frozen=True)
 class FromValueImpl[_](FromValue):
-    value: Any
+    value: None
 
 
 def init_from_value(value):

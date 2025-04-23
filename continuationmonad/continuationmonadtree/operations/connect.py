@@ -8,7 +8,7 @@ from continuationmonad.scheduler.continuationcertificate import ContinuationCert
 from continuationmonad.scheduler.schedulers.trampoline import Trampoline
 
 
-class Connect[U](SingleChildContinuationMonadNode[tuple[ContinuationCertificate, ...], U]):
+class Connect[U](SingleChildContinuationMonadNode[U, tuple[ContinuationCertificate, ...]]):
     def __str__(self) -> str:
         return f'connect({self.observers})'
 
@@ -18,9 +18,9 @@ class Connect[U](SingleChildContinuationMonadNode[tuple[ContinuationCertificate,
 
     def subscribe(
         self,
-        args: SubscribeArgs,
+        args: SubscribeArgs[tuple[ContinuationCertificate, ...]],
     ) -> ContinuationCertificate:
-        def n_on_next(n_trampoline: Trampoline, value: U):
+        def on_next(n_trampoline: Trampoline, value: U):
             def gen_certificates():
                 for observer in self.observers:
 
@@ -33,6 +33,4 @@ class Connect[U](SingleChildContinuationMonadNode[tuple[ContinuationCertificate,
 
             return args.on_next(n_trampoline, certificates)
         
-        return self.child.subscribe(args=args.copy(
-            on_next=n_on_next,
-        ))
+        return self.child.subscribe(args=args.copy(on_next=on_next))
