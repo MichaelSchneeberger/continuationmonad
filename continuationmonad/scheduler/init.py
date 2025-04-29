@@ -12,10 +12,10 @@ from continuationmonad.scheduler.schedulers.currentthreadscheduler import (
 )
 from continuationmonad.scheduler.schedulers.eventloopscheduler import (
     EventLoopScheduler,
+    MainScheduler,
 )
-from continuationmonad.scheduler.schedulers.mainscheduler import MainScheduler
 from continuationmonad.scheduler.schedulers.trampoline import Trampoline
-from continuationmonad.scheduler.schedulers.virtualtimescheduler import VirtualTimeScheduler
+from continuationmonad.scheduler.schedulers.virtualtimescheduler import MainVirtualTimeScheduler, VirtualTimeScheduler
 
 
 # def init_main_trampoline():
@@ -46,7 +46,7 @@ def init_current_thread_scheduler():
     )
 
 
-@dataclassabc(frozen=True)
+@dataclassabc(frozen=False)
 class EventLoopSchedulerImpl(EventLoopScheduler):
     immediate_tasks: Deque[ScheduledTask]
     delayed_tasks: list[DelayedScheduledTask]
@@ -56,46 +56,47 @@ class EventLoopSchedulerImpl(EventLoopScheduler):
     is_stopped: bool
 
 
-def init_event_loop_scheduler():
+@dataclassabc(frozen=False)
+class MainSchedulerImpl(EventLoopSchedulerImpl, MainScheduler):
+    pass
+
+
+def init_event_loop_scheduler(
+    is_main: bool | None = None,
+):
+    if is_main is None:
+        is_main = False
+
     lock = Lock()
     delayed_task_lock = Lock()
 
-    scheduler = EventLoopSchedulerImpl(
-        immediate_tasks=deque(),
-        delayed_tasks=[],
-        lock=lock,
-        delayed_task_lock=delayed_task_lock,
-        condition=Condition(lock),
-        is_stopped=False,
-    )
+    if is_main:
+        return MainSchedulerImpl(
+            immediate_tasks=deque(),
+            delayed_tasks=[],
+            lock=lock,
+            delayed_task_lock=delayed_task_lock,
+            condition=Condition(lock),
+            is_stopped=False,
+        )
 
-    Thread(target=scheduler.start_loop, daemon=True).start()
+    else:
+        scheduler = EventLoopSchedulerImpl(
+            immediate_tasks=deque(),
+            delayed_tasks=[],
+            lock=lock,
+            delayed_task_lock=delayed_task_lock,
+            condition=Condition(lock),
+            is_stopped=False,
+        )
 
-    return scheduler
+        Thread(target=scheduler.start_loop, daemon=True).start()
 
-
-@dataclassabc
-class MainSchedulerImpl(MainScheduler):
-    immediate_tasks: Deque[ScheduledTask]
-    delayed_tasks: list[DelayedScheduledTask]
-    lock: Lock
-    delayed_task_lock: Lock
-    condition: Condition
-    is_stopped: bool
-
+        return scheduler
+    
 
 def init_main_scheduler():
-    lock = Lock()
-    delayed_task_lock = Lock()
-
-    return MainSchedulerImpl(
-        immediate_tasks=deque(),
-        delayed_tasks=[],
-        lock=lock,
-        delayed_task_lock=delayed_task_lock,
-        condition=Condition(lock),
-        is_stopped=False,
-    )
+    return init_event_loop_scheduler(is_main=True)
 
 
 @dataclassabc(frozen=True)
@@ -109,7 +110,7 @@ def init_trampoline():
     )
 
 
-@dataclassabc
+@dataclassabc(frozen=False)
 class VirtualTimeSchedulerImpl(VirtualTimeScheduler):
     immediate_tasks: Deque[ScheduledTask]
     delayed_tasks: list[VirtualScheduledTask]
@@ -119,12 +120,40 @@ class VirtualTimeSchedulerImpl(VirtualTimeScheduler):
     idle: bool
 
 
-def init_virtual_time_scheduler():
-    return VirtualTimeSchedulerImpl(
-        immediate_tasks=deque(),
-        delayed_tasks=[],
-        lock=Lock(),
-        delayed_task_lock= Lock(),
-        idle=True,
-        time=0,
-    )
+@dataclassabc(frozen=False)
+class MainVirtualTimeSchedulerImpl(VirtualTimeSchedulerImpl, MainVirtualTimeScheduler):
+    # immediate_tasks: Deque[ScheduledTask]
+    # delayed_tasks: list[VirtualScheduledTask]
+    # lock: Lock
+    # delayed_task_lock: Lock
+    # time: float
+    # idle: bool
+    is_stopped: bool
+
+
+def init_virtual_time_scheduler(
+    is_main: bool | None = None,
+):
+    if is_main is None:
+        is_main = False
+
+    if is_main:
+        return MainVirtualTimeSchedulerImpl(
+            immediate_tasks=deque(),
+            delayed_tasks=[],
+            lock=Lock(),
+            delayed_task_lock= Lock(),
+            idle=True,
+            time=0,
+            is_stopped=True,
+        )
+    
+    else:
+        return VirtualTimeSchedulerImpl(
+            immediate_tasks=deque(),
+            delayed_tasks=[],
+            lock=Lock(),
+            delayed_task_lock= Lock(),
+            idle=True,
+            time=0,
+        )

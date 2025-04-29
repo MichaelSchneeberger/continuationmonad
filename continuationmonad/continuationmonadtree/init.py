@@ -1,7 +1,9 @@
 from typing import Callable, Iterable
 from dataclassabc import dataclassabc
 
-from continuationmonad.continuationmonadtree.sources.schedulewithdelay import ScheduleWithDelay
+from continuationmonad.continuationmonadtree.sources.schedulewithdelay import (
+    ScheduleWithDelay,
+)
 from continuationmonad.scheduler.scheduler import Scheduler
 from continuationmonad.utils.framesummary import FrameSummary
 from continuationmonad.scheduler.continuationcertificate import (
@@ -22,6 +24,9 @@ from continuationmonad.continuationmonadtree.operations.defer import (
 from continuationmonad.continuationmonadtree.operations.flatmap import FlatMap
 from continuationmonad.continuationmonadtree.sources.gettrampoline import (
     GetTrampoline,
+)
+from continuationmonad.continuationmonadtree.sources.error import (
+    Error,
 )
 from continuationmonad.continuationmonadtree.operations.map import Map
 from continuationmonad.continuationmonadtree.sources.fromvalue import FromValue
@@ -94,11 +99,13 @@ def init_zip(children: Iterable[ContinuationMonadNode]):
 
     match len(children):
         case 0:
-            raise AssertionError('No continuation monads provided. Cannot create a continuation monad.')
-        
+            raise AssertionError(
+                "No continuation monads provided. Cannot create a continuation monad."
+            )
+
         case 1:
             return children
-        
+
         case _:
             return ZipImpl(children=children)
 
@@ -116,6 +123,15 @@ def init_map(child, func, stack):
         func=func,
         stack=stack,
     )
+
+
+@dataclassabc(frozen=True)
+class ErrorImpl[_](Error):
+    exception: Exception
+
+
+def init_error(exception):
+    return ErrorImpl(exception)
 
 
 @dataclassabc(frozen=True)

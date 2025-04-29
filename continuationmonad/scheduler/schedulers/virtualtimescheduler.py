@@ -5,6 +5,7 @@ from typing import Callable, Deque, override
 
 from continuationmonad.scheduler.cancellation import Cancellation
 from continuationmonad.scheduler.continuationcertificate import ContinuationCertificate
+from continuationmonad.scheduler.mainschedulermixin import MainSchedulerMixin
 from continuationmonad.scheduler.scheduledtask import VirtualScheduledTask, ScheduledTask
 from continuationmonad.scheduler.scheduler import Scheduler
 from continuationmonad.utils.framesummary import get_frame_summary
@@ -97,6 +98,8 @@ class VirtualTimeScheduler(Scheduler):
             idle = self.idle
             self.idle = False
 
+        assert idle
+
         while True:
             if self.immediate_tasks:
                 entry = self.immediate_tasks.popleft()
@@ -139,3 +142,38 @@ class VirtualTimeScheduler(Scheduler):
                         self.idle = True
                         break
 
+
+class MainVirtualTimeScheduler(MainSchedulerMixin, VirtualTimeScheduler):
+    @property
+    @abstractmethod
+    def is_stopped(self) -> bool: ...
+
+    @is_stopped.setter
+    @abstractmethod
+    def is_stopped(selfc, val: bool): ...
+
+
+    def stop(self):
+        """
+        The stop function is capable of creating the finishing Continuation
+        """
+
+        with self.lock:
+            if self.is_stopped:
+                raise Exception("Scheduler can only be stopped once.")
+            self.is_stopped = True
+
+        return self._create_certificate(weight=1, stack=get_frame_summary())
+
+    def run(
+        self,
+        task: Callable[[], ContinuationCertificate],
+        cancellation: Cancellation | None = None,
+    ) -> None:
+        
+        with self.lock:
+            if not self.is_stopped:
+                raise Exception("Scheduler can only be run once.")
+            self.is_stopped = False
+        
+        self.schedule(task=task, weight=1, cancellation=cancellation)

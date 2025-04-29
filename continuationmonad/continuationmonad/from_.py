@@ -5,6 +5,7 @@ from continuationmonad.continuationmonad.init import init_continuation_monad
 
 from continuationmonad.continuationmonadtree.deferredhandler import DeferredHandler
 from continuationmonad.continuationmonadtree.init import (
+    init_error,
     init_schedule_with_delay,
     init_zip,
     init_from_value,
@@ -95,6 +96,10 @@ def zip[U](
     """
 
     return init_continuation_monad(init_zip(children=tuple(sources)))
+
+
+def error(exception: Exception):
+    return init_continuation_monad(init_error(exception=exception))
 
 
 def from_[U](value: U):

@@ -17,6 +17,7 @@ from continuationmonad.continuationmonadtree.observer import (
 from continuationmonad.continuationmonad.from_ import (
     defer as _defer,
     get_trampoline as _get_trampoline,
+    error as _error,
     from_ as _from_value,
     zip as _zip,
     schedule_on as _schedule_on,
@@ -45,6 +46,7 @@ init_anonymous_observer = _init_anonymous_observer
 # Create continuation source
 ############################
 
+error = _error
 from_ = _from_value
 get_trampoline = _get_trampoline
 schedule_trampoline = _schedule_trampoline
