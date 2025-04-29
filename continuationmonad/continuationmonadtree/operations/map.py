@@ -22,12 +22,16 @@ class MapObserver[U, V](FrameSummaryMixin, Observer[U]):
     observer: Observer[V]
     func: Callable[[U], V]
     stack: tuple[FrameSummary, ...]
+    raise_immediately: bool
 
     def on_success(self, trampoline: Trampoline, item: U):
         try:
             mapped_item = self.func(item)
 
         except ContinuationMonadOperatorException as exception:
+            if self.raise_immediately:
+                raise
+
             exception = ContinuationMonadOperatorException(
                 "\n".join(
                     (
@@ -39,6 +43,11 @@ class MapObserver[U, V](FrameSummaryMixin, Observer[U]):
             return self.observer.on_error(trampoline, exception)
 
         except Exception:
+            if self.raise_immediately:
+                raise ContinuationMonadOperatorException(
+                    self.to_operator_exception_message(stack=self.stack)
+                )
+    
             exception = ContinuationMonadOperatorException(
                 "\n".join(
                     (
@@ -67,12 +76,12 @@ class Map[U, V](FrameSummaryMixin, SingleChildContinuationMonadNode[U, V]):
         self,
         args: SubscribeArgs,
     ):
+
         return self.child.subscribe(
-            args=args.copy(
-                observer=MapObserver(
-                    observer=args.observer,
-                    func=self.func,
-                    stack=self.stack,
-                )
-            )
+            args=args.copy(observer=MapObserver(
+                observer=args.observer,
+                func=self.func,
+                stack=self.stack,
+                raise_immediately=args.raise_immediately,
+            ))
         )

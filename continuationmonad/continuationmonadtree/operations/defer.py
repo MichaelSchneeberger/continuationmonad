@@ -40,6 +40,9 @@ class Defer[U](FrameSummaryMixin, ContinuationMonadNode[U]):
             continuation = self.func(args.trampoline, deferred_handler)
 
         except ContinuationMonadOperatorException as exception:
+            if args.raise_immediately:
+                raise
+
             exception = ContinuationMonadOperatorException(
                 "\n".join(
                     (
@@ -51,6 +54,11 @@ class Defer[U](FrameSummaryMixin, ContinuationMonadNode[U]):
             return args.observer.on_error(args.trampoline, exception)
 
         except Exception:
+            if args.raise_immediately:
+                raise ContinuationMonadOperatorException(
+                    self.to_operator_exception_message(stack=self.stack)
+                )
+
             exception = ContinuationMonadOperatorException(
                 "\n".join(
                     (

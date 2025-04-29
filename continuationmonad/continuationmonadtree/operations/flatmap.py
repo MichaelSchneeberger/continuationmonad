@@ -29,12 +29,16 @@ class FlatMapObserver[U, V](FrameSummaryMixin, Observer[U]):
     stack: tuple[FrameSummary, ...]
     weight: int
     cancellation: Cancellation | None
+    raise_immediately: bool
 
     def on_success(self, trampoline: Trampoline, item: U):
         try:
             continuation = self.func(item)
 
         except ContinuationMonadOperatorException as exception:
+            if self.raise_immediately:
+                raise
+
             exception = ContinuationMonadOperatorException(
                 "\n".join(
                     (
@@ -46,6 +50,11 @@ class FlatMapObserver[U, V](FrameSummaryMixin, Observer[U]):
             return self.observer.on_error(trampoline, exception)
 
         except Exception:
+            if self.raise_immediately:
+                raise ContinuationMonadOperatorException(
+                    self.to_operator_exception_message(stack=self.stack)
+                )
+    
             exception = ContinuationMonadOperatorException(
                 "\n".join(
                     (
@@ -67,6 +76,9 @@ class FlatMapObserver[U, V](FrameSummaryMixin, Observer[U]):
             )
 
         except ContinuationMonadOperatorException as exception:
+            if self.raise_immediately:
+                raise
+
             exception = ContinuationMonadOperatorException(
                 "\n".join(
                     (
@@ -78,6 +90,11 @@ class FlatMapObserver[U, V](FrameSummaryMixin, Observer[U]):
             return self.observer.on_error(trampoline, exception)
 
         except Exception:
+            if self.raise_immediately:
+                raise ContinuationMonadOperatorException(
+                    self.to_operator_exception_message(stack=self.stack)
+                )
+
             exception = ContinuationMonadOperatorException(
                 "\n".join(
                     (
@@ -114,6 +131,7 @@ class FlatMap[U, V](FrameSummaryMixin, SingleChildContinuationMonadNode[U, V]):
                     stack=self.stack,
                     weight=args.weight,
                     cancellation=args.cancellation,
+                    raise_immediately=args.raise_immediately,
                 )
             )
         )

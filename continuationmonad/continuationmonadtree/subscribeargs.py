@@ -9,8 +9,6 @@ from continuationmonad.scheduler.schedulers.trampoline import Trampoline
 
 @dataclass
 class SubscribeArgs[U]:
-    # on_success: Callable[[Trampoline, U], ContinuationCertificate]
-    # on_error: Callable[[Exception], ContinuationCertificate]
     observer: Observer[U]
 
     # weight of the continuation certificate returned by the subscribe method
@@ -22,6 +20,8 @@ class SubscribeArgs[U]:
 
     # ensure that no item is emitted before subscribe method returns
     trampoline: Trampoline
+
+    raise_immediately: bool
 
     def copy[V](
         self, /,
@@ -49,10 +49,15 @@ def init_subscribe_args[U](
     trampoline: Trampoline,
     weight: int,
     cancellation: Cancellation | None = None,
+    raise_immediately: bool | None = None,
 ):
+    if raise_immediately is None:
+        raise_immediately = True
+
     return SubscribeArgs(
         observer=observer,
         weight=weight,
         cancellation=cancellation,
         trampoline=trampoline,
+        raise_immediately=raise_immediately,
     )
