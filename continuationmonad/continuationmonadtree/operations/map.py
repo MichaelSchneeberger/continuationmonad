@@ -36,7 +36,7 @@ class MapObserver[U, V](FrameSummaryMixin, Observer[U]):
                     )
                 )
             )
-            return self.observer.on_error(exception)
+            return self.observer.on_error(trampoline, exception)
 
         except Exception:
             exception = ContinuationMonadOperatorException(
@@ -47,12 +47,12 @@ class MapObserver[U, V](FrameSummaryMixin, Observer[U]):
                     )
                 )
             )
-            return self.observer.on_error(exception)
+            return self.observer.on_error(trampoline, exception)
 
         return self.observer.on_success(trampoline, mapped_item)
 
-    def on_error(self, exception: Exception):
-        return self.observer.on_error(exception)
+    def on_error(self, trampoline: Trampoline, exception: Exception):
+        return self.observer.on_error(trampoline, exception)
 
 
 class Map[U, V](FrameSummaryMixin, SingleChildContinuationMonadNode[U, V]):

@@ -11,6 +11,9 @@ from continuationmonad.continuationmonadtree.subscribeargs import (
 from continuationmonad.continuationmonad.init import (
     init_continuation_monad as _init_continuation_monad,
 )
+from continuationmonad.continuationmonadtree.observer import (
+    init_anonymous_observer as _init_anonymous_observer,
+)
 from continuationmonad.continuationmonad.from_ import (
     defer as _defer,
     get_trampoline as _get_trampoline,
@@ -36,6 +39,8 @@ init_main_scheduler = _init_main_scheduler
 init_trampoline = _init_trampoline
 init_virtual_time_scheduler = _init_virtual_time_scheduler
 
+
+init_anonymous_observer = _init_anonymous_observer
 
 # Create continuation source
 ############################

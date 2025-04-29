@@ -48,7 +48,7 @@ class Defer[U](FrameSummaryMixin, ContinuationMonadNode[U]):
                     )
                 )
             )
-            return args.observer.on_error(exception)
+            return args.observer.on_error(args.trampoline, exception)
 
         except Exception:
             exception = ContinuationMonadOperatorException(
@@ -59,7 +59,7 @@ class Defer[U](FrameSummaryMixin, ContinuationMonadNode[U]):
                     )
                 )
             )
-            return args.observer.on_error(exception)
+            return args.observer.on_error(args.trampoline, exception)
 
         if isinstance(continuation, ContinuationCertificate):
             assert continuation.weight == args.weight, (
@@ -74,7 +74,7 @@ class Defer[U](FrameSummaryMixin, ContinuationMonadNode[U]):
                     return item
 
                 def on_error(self, exception: Exception) -> ContinuationCertificate:
-                    return args.observer.on_error(exception)
+                    return args.observer.on_error(args.trampoline, exception)
 
 
             return continuation.subscribe(args=args.copy(

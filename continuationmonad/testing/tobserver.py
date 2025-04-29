@@ -14,7 +14,7 @@ class TObserver[U](Observer[U]):
         self.received.append(item)
         return self.main_scheduler.stop()
 
-    def on_error(self, exception: Exception) -> ContinuationCertificate:
+    def on_error(self, trampoline: Trampoline, exception: Exception) -> ContinuationCertificate:
         return self.main_scheduler.stop()
 
 

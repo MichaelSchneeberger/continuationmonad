@@ -9,6 +9,10 @@ from continuationmonad.scheduler.instantscheduler import (
 )
 from continuationmonad.scheduler.scheduler import Scheduler as _Scheduler
 from continuationmonad.scheduler.schedulers.trampoline import Trampoline as _Trampoline
+from continuationmonad.continuationmonadtree.observer import (
+    Observer as _Observer,
+)
+
 from continuationmonad.continuationmonadtree.deferredhandler import (
     DeferredHandler as _DeferredHandler,
 )
@@ -26,6 +30,7 @@ InstantScheduler = _InstantScheduler
 Scheduler = _Scheduler
 Trampoline = _Trampoline
 
+Observer = _Observer
 DeferredHandler = _DeferredHandler
 SubscribeArgs = _SubscribeArgs
 ContinuationMonad = _ContinuationMonad

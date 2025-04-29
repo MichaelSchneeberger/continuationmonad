@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import Callable
-from continuationmonad.continuationmonadtree.observer import Observer
+from continuationmonad.continuationmonadtree.observer import Observer, init_anonymous_observer
 from continuationmonad.scheduler.cancellation import Cancellation
 from continuationmonad.scheduler.continuationcertificate import ContinuationCertificate
 from continuationmonad.scheduler.init import init_trampoline
@@ -12,18 +12,31 @@ from continuationmonad.continuationmonad.continuationmonad import ContinuationMo
 
 @dataclass
 class ForkObserver(Observer[ContinuationCertificate]):
-    on_error_func: Callable[[Exception], ContinuationCertificate]
+    on_error_func: Callable[[Exception], ContinuationMonad[ContinuationCertificate]]
+    cancellation: Cancellation | None
+    weight: int
 
-    def on_success(self, trampoline: Trampoline, item: ContinuationCertificate):
+    def on_success(self, _, item: ContinuationCertificate):
         return item
 
-    def on_error(self, exception: Exception) -> ContinuationCertificate:
-        return self.on_error_func(exception)
+    def on_error(self, trampoline: Trampoline, exception: Exception) -> ContinuationCertificate:
+        args = init_subscribe_args(
+            observer=init_anonymous_observer(
+                on_success=lambda _, c: c,
+            ),
+            trampoline=trampoline,
+            cancellation=self.cancellation,
+            weight=self.weight,
+        )
+
+        return self.on_error_func(exception).subscribe(
+            args=args,
+        )
 
 
 def fork(
     source: ContinuationMonad[ContinuationCertificate],
-    on_error: Callable[[Exception], ContinuationCertificate],
+    on_error: Callable[[Exception], ContinuationMonad[ContinuationCertificate]],
     scheduler: InstantScheduler,
     weight: int,
     cancellation: Cancellation | None = None,
@@ -31,7 +44,11 @@ def fork(
     match scheduler:
         case Trampoline() as trampoline:
             args = init_subscribe_args(
-                observer=ForkObserver(on_error_func=on_error),
+                observer=ForkObserver(
+                    on_error_func=on_error,
+                    cancellation=cancellation,
+                    weight=weight,
+                ),
                 trampoline=trampoline,
                 cancellation=cancellation,
                 weight=weight,
@@ -52,7 +69,11 @@ def fork(
                 trampoline = init_trampoline()
 
                 args = init_subscribe_args(
-                    on_success=lambda _, c: c,
+                    observer=ForkObserver(
+                        on_error_func=on_error,
+                        cancellation=cancellation,
+                        weight=weight,
+                    ),
                     trampoline=trampoline,
                     cancellation=cancellation,
                     weight=weight,

@@ -2,13 +2,10 @@ from __future__ import annotations
 
 from collections import deque
 from threading import Condition, Lock, Thread
-from typing import Callable, Deque
-import datetime
+from typing import Deque
 
 from dataclassabc import dataclassabc
 
-from continuationmonad.scheduler.cancellation import Cancellation
-from continuationmonad.scheduler.continuationcertificate import ContinuationCertificate
 from continuationmonad.scheduler.scheduledtask import DelayedScheduledTask, ScheduledTask, VirtualScheduledTask
 from continuationmonad.scheduler.schedulers.currentthreadscheduler import (
     CurrentThreadScheduler,
@@ -17,10 +14,8 @@ from continuationmonad.scheduler.schedulers.eventloopscheduler import (
     EventLoopScheduler,
 )
 from continuationmonad.scheduler.schedulers.mainscheduler import MainScheduler
-from continuationmonad.scheduler.schedulers.maintrampoline import MainTrampoline
 from continuationmonad.scheduler.schedulers.trampoline import Trampoline
 from continuationmonad.scheduler.schedulers.virtualtimescheduler import VirtualTimeScheduler
-from continuationmonad.utils.framesummary import FrameSummary
 
 
 # def init_main_trampoline():

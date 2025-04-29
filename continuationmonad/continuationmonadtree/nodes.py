@@ -27,11 +27,11 @@ class ContinuationMonadNode[V](ABC):
         received_item = []
 
         class MainObserver(Observer):
-            def on_success(self, trampoline: Trampoline, item: V) -> ContinuationCertificate:
+            def on_success(self, _, item: V) -> ContinuationCertificate:
                 received_item.append(item)
                 return main_scheduler.stop()
 
-            def on_error(self, exception: Exception) -> ContinuationCertificate:
+            def on_error(self, _, exception: Exception) -> ContinuationCertificate:
                 received_exception.append(exception)
                 return main_scheduler.stop()
 

@@ -175,7 +175,7 @@ class ZipObserver[U](Observer[U]):
             case _:
                 raise Exception(f"Unexpected state {state}")
 
-    def on_error(self, exception: Exception) -> ContinuationCertificate:
+    def on_error(self, trampoline: Trampoline, exception: Exception) -> ContinuationCertificate:
         transition = OnErrorTransition(
             id=self.id,
             child=None,  # type: ignore
@@ -187,7 +187,7 @@ class ZipObserver[U](Observer[U]):
 
         match state := transition.get_state():
             case OnErrorState():
-                return self.shared.observer.on_error(exception)
+                return self.shared.observer.on_error(trampoline, exception)
             
             case TerminatedStateMixin(certificate=certificate):
                 return certificate

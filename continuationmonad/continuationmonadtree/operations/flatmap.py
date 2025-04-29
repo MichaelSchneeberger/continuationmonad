@@ -43,7 +43,7 @@ class FlatMapObserver[U, V](FrameSummaryMixin, Observer[U]):
                     )
                 )
             )
-            return self.observer.on_error(exception)
+            return self.observer.on_error(trampoline, exception)
 
         except Exception:
             exception = ContinuationMonadOperatorException(
@@ -54,7 +54,7 @@ class FlatMapObserver[U, V](FrameSummaryMixin, Observer[U]):
                     )
                 )
             )
-            return self.observer.on_error(exception)
+            return self.observer.on_error(trampoline, exception)
 
         try:
             certificate = continuation.subscribe(
@@ -75,7 +75,7 @@ class FlatMapObserver[U, V](FrameSummaryMixin, Observer[U]):
                     )
                 )
             )
-            return self.observer.on_error(exception)
+            return self.observer.on_error(trampoline, exception)
 
         except Exception:
             exception = ContinuationMonadOperatorException(
@@ -86,12 +86,12 @@ class FlatMapObserver[U, V](FrameSummaryMixin, Observer[U]):
                     )
                 )
             )
-            return self.observer.on_error(exception)
+            return self.observer.on_error(trampoline, exception)
 
         return certificate
 
-    def on_error(self, exception: Exception):
-        return self.observer.on_error(exception)
+    def on_error(self, trampoline: Trampoline, exception: Exception):
+        return self.observer.on_error(trampoline, exception)
 
 
 class FlatMap[U, V](FrameSummaryMixin, SingleChildContinuationMonadNode[U, V]):

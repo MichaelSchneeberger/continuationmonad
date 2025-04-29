@@ -30,8 +30,8 @@ class ConnectObserver[U](Observer[U]):
 
         return self.observer.on_success(trampoline, certificates)
 
-    def on_error(self, exception: Exception):
-        return self.observer.on_error(exception)
+    def on_error(self, trampoline: Trampoline, exception: Exception):
+        return self.observer.on_error(trampoline, exception)
 
 
 class Connect[U](
