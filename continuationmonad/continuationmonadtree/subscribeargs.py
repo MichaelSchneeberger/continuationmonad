@@ -1,14 +1,17 @@
-from dataclasses import dataclass, replace
-from typing import Any, Callable
+from __future__ import annotations
 
+from dataclasses import dataclass, replace
+
+from continuationmonad.continuationmonadtree.observer import Observer
 from continuationmonad.scheduler.cancellation import Cancellation
-from continuationmonad.scheduler.continuationcertificate import ContinuationCertificate
 from continuationmonad.scheduler.schedulers.trampoline import Trampoline
 
 
 @dataclass
 class SubscribeArgs[U]:
-    on_next: Callable[[Trampoline, U], ContinuationCertificate]
+    # on_success: Callable[[Trampoline, U], ContinuationCertificate]
+    # on_error: Callable[[Exception], ContinuationCertificate]
+    observer: Observer[U]
 
     # weight of the continuation certificate returned by the subscribe method
     weight: int
@@ -21,16 +24,15 @@ class SubscribeArgs[U]:
     trampoline: Trampoline
 
     def copy[V](
-        self, /, 
-        on_next: Callable[[Trampoline, V], ContinuationCertificate] | None = None, 
+        self, /,
+        observer: Observer[V] | None = None,
         cancellation: Cancellation | None = None,
         trampoline: Trampoline | None = None,
         weight: int | None = None,
-        **others,
-    ):
+    ) -> SubscribeArgs[V]:
         def gen_args():
-            if on_next is not None:
-                yield 'on_next', on_next
+            if observer is not None:
+                yield 'observer', observer
             if cancellation is not None:
                 yield 'cancellation', cancellation
             if trampoline is not None:
@@ -38,18 +40,18 @@ class SubscribeArgs[U]:
             if weight is not None:
                 yield 'weight', weight
 
-        args = dict(gen_args()) | others
+        args = dict(gen_args())
         return replace(self, **args)
 
 
-def init_subscribe_args(
-    on_next: Callable[[Trampoline, Any], ContinuationCertificate],
+def init_subscribe_args[U](
+    observer: Observer[U],
     trampoline: Trampoline,
     weight: int,
     cancellation: Cancellation | None = None,
 ):
     return SubscribeArgs(
-        on_next=on_next,
+        observer=observer,
         weight=weight,
         cancellation=cancellation,
         trampoline=trampoline,

@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
-from typing import Callable
 from dataclasses import dataclass
 from threading import RLock
 
 from continuationmonad.scheduler.continuationcertificate import ContinuationCertificate
 from continuationmonad.scheduler.schedulers.trampoline import Trampoline
+from continuationmonad.continuationmonadtree.observer import Observer
 from continuationmonad.continuationmonadtree.subscribeargs import SubscribeArgs
 from continuationmonad.continuationmonadtree.nodes import (
     MultiChildrenContinuationMonadNode,
@@ -14,36 +14,56 @@ from continuationmonad.continuationmonadtree.nodes import (
 # States
 ########
 
+
 class ZipState: ...
 
 
-@dataclass
-class WaitStateBase(ZipState):
+@dataclass(frozen=True, slots=True)
+class AwaitUpstreamStateMixin[U](ZipState):
     certificates: tuple[ContinuationCertificate, ...]
+    values: dict[int, U]
 
 
-@dataclass
-class InitState(WaitStateBase):
+@dataclass(frozen=True, slots=True)
+class InitState(AwaitUpstreamStateMixin):
     pass
 
 
-@dataclass
-class WaitState(WaitStateBase):
+@dataclass(frozen=True, slots=True)
+class AwaitFurtherState(AwaitUpstreamStateMixin):
     certificate: ContinuationCertificate
 
 
-class OnNextState(ZipState): ...
+@dataclass(frozen=True, slots=True)
+class OnSuccessState[U](ZipState):
+    values: dict[int, U]
+
+
+@dataclass(frozen=True, slots=True)
+class TerminatedStateMixin(ZipState):
+    """Flowable either completed, errored, or cancelled"""
+    certificates: dict[int, ContinuationCertificate]
+
+
+@dataclass(frozen=True, slots=True)
+class OnErrorState(TerminatedStateMixin):
+    pass
+
+
+@dataclass(frozen=True, slots=True)
+class HasTerminatedState(TerminatedStateMixin):
+    """Has previously been terminated"""
+
+    certificate: ContinuationCertificate
 
 
 # Transitions
 #############
 
+
 class ZipTransition(ABC):
     @abstractmethod
     def get_state(self) -> ZipState: ...
-
-    @abstractmethod
-    def get_values(self) -> tuple: ...
 
 
 @dataclass
@@ -54,61 +74,126 @@ class InitTransition(ZipTransition):
     def get_state(self):
         return InitState(
             certificates=self.certificates,
+            values={},
         )
-
-    def get_values(self) -> tuple:
-        return tuple()
 
 
 @dataclass
 class OnNextTransition[U](ZipTransition):
+    id: int
     child: ZipTransition
-    value: U
+    item: U
 
     def get_state(self):
-        match state := self.child.get_state():           
-            case WaitStateBase(certificates=certificates):
+        match state := self.child.get_state():
+            case AwaitUpstreamStateMixin(
+                certificates=certificates,
+                values=values,
+            ):
+                values = values | {self.id: self.item}
                 if certificates:
-                    return WaitState(
+                    return AwaitFurtherState(
                         certificate=certificates[0],
                         certificates=certificates[1:],
+                        values=values,
                     )
                 else:
-                    return OnNextState()
-            
-            case _:
-                raise Exception(f'Unexpected state {state}')
+                    return OnSuccessState(values=values)
 
-    def get_values(self) -> tuple:
-        return self.child.get_values() + (self.value,)
+            case TerminatedStateMixin(certificates):
+                return HasTerminatedState(
+                    certificate=certificates[self.id],
+                    certificates={id: c for id, c in certificates.items() if id != self.id},
+                )
+
+            case _:
+                raise Exception(f"Unexpected state {state}")
 
 
 @dataclass
-class ZipObserver[U]:
-    action: ZipTransition
-    lock: RLock
-    certificates: list[ContinuationCertificate]
-    on_next: Callable[[Trampoline, tuple[U, ...]], ContinuationCertificate]
+class OnErrorTransition(ZipTransition):
+    id: int
+    n_children: int
+    child: ZipTransition
 
-    def __call__(self, trampoline: Trampoline, value: U):
-        action = OnNextTransition(
+    def get_state(self):
+        match state := self.child.get_state():
+            case AwaitUpstreamStateMixin(
+                certificates=certificates,
+                values=values,
+            ):
+                received_ids = tuple(values.keys())
+                awaiting_ids = tuple(id for id in range(self.n_children) if id not in received_ids)
+                return OnErrorState(
+                    certificates=dict(zip(awaiting_ids, certificates)),
+                )
+            
+            case TerminatedStateMixin(certificates=certificates):
+                return HasTerminatedState(
+                    certificate=certificates[self.id],
+                    certificates={id: c for id, c in certificates.items() if id != self.id},
+                )
+
+            case _:
+                raise Exception(f"Unexpected state {state}")
+
+
+@dataclass
+class SharedZipMemory:
+    observer: Observer
+    transition: ZipTransition
+    lock: RLock
+
+
+@dataclass
+class ZipObserver[U](Observer[U]):
+    id: int
+    shared: SharedZipMemory
+
+    def on_success(self, trampoline: Trampoline, item: U) -> ContinuationCertificate:
+        transition = OnNextTransition(
+            id=self.id,
             child=None,  # type: ignore
-            value=value,
+            item=item,
         )
 
-        with self.lock:
-            action.child = self.action
-            self.action = action
+        with self.shared.lock:
+            transition.child = self.shared.transition
+            self.shared.transition = transition
 
-        match state := action.get_state():
-            case OnNextState():
-                return self.on_next(trampoline, action.get_values())
-            
-            case WaitState(certificate=certificate):
+        match state := transition.get_state():
+            case OnSuccessState(values=values):
+                _, zipped_values = zip(*sorted(values.items()))
+                return self.shared.observer.on_success(trampoline, zipped_values)
+
+            case AwaitFurtherState(certificate=certificate):
                 return certificate
             
+            case TerminatedStateMixin(certificate=certificate):
+                return certificate
+
             case _:
-                raise Exception(f'Unexpected state {state}')
+                raise Exception(f"Unexpected state {state}")
+
+    def on_error(self, exception: Exception) -> ContinuationCertificate:
+        transition = OnErrorTransition(
+            id=self.id,
+            child=None,  # type: ignore
+        )
+
+        with self.shared.lock:
+            transition.child = self.shared.transition
+            self.shared.transition = transition
+
+        match state := transition.get_state():
+            case OnErrorState():
+                return self.shared.observer.on_error(exception)
+            
+            case TerminatedStateMixin(certificate=certificate):
+                return certificate
+
+            case _:
+                raise Exception(f"Unexpected state {state}")
 
 
 class Zip[U](MultiChildrenContinuationMonadNode[U, tuple[U, ...]]):
@@ -119,28 +204,28 @@ class Zip[U](MultiChildrenContinuationMonadNode[U, tuple[U, ...]]):
         self,
         args: SubscribeArgs,
     ) -> ContinuationCertificate:
-        observer = ZipObserver(
-            action=None,
+        
+        shared = SharedZipMemory(
+            observer=args.observer,
+            transition=None,
             lock=RLock(),
-            certificates=None,  # type: ignore
-            on_next=args.on_next,
         )
-        args = args.copy(on_next=observer)
 
         def gen_certificates():
-            for child in self.children:
-                def child_subscription(child=child):
-                    return child.subscribe(args=args)
+            for id, child in enumerate(self.children):
 
-                yield args.trampoline.schedule(
-                    child_subscription,
-                    weight=args.weight,
-                    cancellation=args.cancellation,
+                observer = ZipObserver[U](
+                    id=id,
+                    shared=shared,
                 )
+
+                yield child.subscribe(args=args.copy(
+                    observer=observer,
+                ))
 
         certificates = tuple(gen_certificates())
 
-        observer.action = InitTransition(
+        shared.transition = InitTransition(
             counter=len(self.children),
             certificates=certificates[1:],
         )

@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+from continuationmonad.continuationmonadtree.observer import Observer
 from continuationmonad.scheduler.continuationcertificate import (
     ContinuationCertificate,
 )
@@ -8,6 +9,7 @@ from continuationmonad.continuationmonadtree.subscribeargs import (
     SubscribeArgs,
     init_subscribe_args,
 )
+from continuationmonad.scheduler.schedulers.trampoline import Trampoline
 
 
 class ContinuationMonadNode[V](ABC):
@@ -21,14 +23,20 @@ class ContinuationMonadNode[V](ABC):
         main_scheduler = init_main_scheduler()
         trampoline = init_trampoline()
 
-        result = []
+        received_exception = []
+        received_item = []
 
-        def on_next(_, value):
-            result.append(value)
-            return main_scheduler.stop()
+        class MainObserver(Observer):
+            def on_success(self, trampoline: Trampoline, item: V) -> ContinuationCertificate:
+                received_item.append(item)
+                return main_scheduler.stop()
+
+            def on_error(self, exception: Exception) -> ContinuationCertificate:
+                received_exception.append(exception)
+                return main_scheduler.stop()
 
         args = init_subscribe_args(
-            on_next=on_next,
+            observer=MainObserver(),
             trampoline=trampoline,
             weight=1,
         )
@@ -40,7 +48,31 @@ class ContinuationMonadNode[V](ABC):
             return trampoline.run(trampoline_task, weight=1)
         main_scheduler.run(schedule_task)
 
-        return result[0]
+        if received_exception:
+            raise received_exception[0]
+
+        return received_item[0]
+
+
+class ContinuationMonadLeave[U](ContinuationMonadNode[U]):
+    @abstractmethod
+    def _subscribe(
+        self,
+        args: SubscribeArgs[U],
+    ) -> ContinuationCertificate: ...
+
+    def subscribe(
+        self,
+        args: SubscribeArgs[U],
+    ) -> ContinuationCertificate:
+        def trampoline_task():
+            return self._subscribe(args=args)
+
+        return args.trampoline.schedule(
+            task=trampoline_task,
+            weight=args.weight,
+            cancellation=args.cancellation,
+        )
 
 
 class SingleChildContinuationMonadNode[U, V](ContinuationMonadNode[V]):

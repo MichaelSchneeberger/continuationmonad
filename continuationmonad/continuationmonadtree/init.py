@@ -1,13 +1,15 @@
 from typing import Callable, Iterable
 from dataclassabc import dataclassabc
 
+from continuationmonad.continuationmonadtree.sources.schedulewithdelay import ScheduleWithDelay
+from continuationmonad.scheduler.scheduler import Scheduler
 from continuationmonad.utils.framesummary import FrameSummary
 from continuationmonad.scheduler.continuationcertificate import (
     ContinuationCertificate,
 )
 from continuationmonad.scheduler.instantscheduler import InstantScheduler
 from continuationmonad.scheduler.schedulers.trampoline import Trampoline
-from continuationmonad.continuationmonadtree.deferredobserver import DeferredObserver
+from continuationmonad.continuationmonadtree.deferredhandler import DeferredHandler
 from continuationmonad.continuationmonadtree.nodes import ContinuationMonadNode
 from continuationmonad.continuationmonadtree.operations.zip import Zip
 from continuationmonad.continuationmonadtree.sources.scheduleon import ScheduleOn
@@ -28,24 +30,24 @@ from continuationmonad.continuationmonadtree.sources.fromvalue import FromValue
 @dataclassabc(frozen=True)
 class ConnectImpl(Connect):
     child: ContinuationMonadNode
-    observers: Iterable[DeferredObserver]
+    handlers: Iterable[DeferredHandler]
 
 
-def init_connect(child, observers):
+def init_connect(child, handlers):
     return ConnectImpl(
         child=child,
-        observers=observers,
+        handlers=handlers,
     )
 
 
 @dataclassabc(frozen=True)
 class DeferImpl[_](Defer):  # hide Impl classes in init.pyi for type hinting
-    func: Callable[[Trampoline, DeferredObserver], ContinuationCertificate]
+    func: Callable[[Trampoline, DeferredHandler], ContinuationCertificate]
     stack: tuple[FrameSummary, ...]
 
 
 def init_defer(
-    func: Callable[[Trampoline, DeferredObserver], ContinuationCertificate],
+    func: Callable[[Trampoline, DeferredHandler], ContinuationCertificate],
     stack: tuple[FrameSummary, ...],
 ):
     return DeferImpl(
@@ -134,5 +136,21 @@ def init_schedule_on(
     scheduler: InstantScheduler,
 ):
     return ScheduleOnImpl(
+        scheduler=scheduler,
+    )
+
+
+@dataclassabc(frozen=True)
+class ScheduleWithDelayImpl(ScheduleWithDelay):
+    duetime: float
+    scheduler: Scheduler
+
+
+def init_schedule_with_delay(
+    duetime: float,
+    scheduler: Scheduler,
+):
+    return ScheduleWithDelayImpl(
+        duetime=duetime,
         scheduler=scheduler,
     )

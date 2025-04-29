@@ -2,10 +2,10 @@ from abc import abstractmethod
 
 from typing import Callable
 
-from continuationmonad.scheduler.cancellation import Cancellation
 from continuationmonad.scheduler.continuationcertificate import (
     ContinuationCertificate,
 )
+from continuationmonad.scheduler.cancellation import Cancellation
 from continuationmonad.scheduler.instantscheduler import InstantScheduler
 
 

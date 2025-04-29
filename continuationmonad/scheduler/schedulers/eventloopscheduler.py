@@ -2,8 +2,10 @@ from abc import abstractmethod
 from threading import Condition, Lock
 from typing import Callable, Deque, override
 import datetime
+import heapq
 
-from continuationmonad.utils.framesummary import FrameSummary, get_frame_summary
+from continuationmonad.scheduler.scheduledtask import DelayedScheduledTask, ScheduledTask
+from continuationmonad.utils.framesummary import get_frame_summary
 from continuationmonad.scheduler.cancellation import Cancellation
 from continuationmonad.scheduler.continuationcertificate import (
     ContinuationCertificate,
@@ -16,28 +18,13 @@ class EventLoopScheduler(Scheduler):
     @abstractmethod
     def immediate_tasks(
         self,
-    ) -> Deque[
-        tuple[
-            Callable[[], ContinuationCertificate],
-            int,
-            Cancellation | None,
-            tuple[FrameSummary, ...],
-        ]
-    ]: ...
+    ) -> Deque[ScheduledTask]: ...
 
     @property
     @abstractmethod
     def delayed_tasks(
         self,
-    ) -> list[
-        tuple[
-            datetime.datetime,
-            Callable[[], ContinuationCertificate],
-            int,
-            Cancellation | None,
-            tuple[FrameSummary, ...],
-        ]
-    ]: ...
+    ) -> list[DelayedScheduledTask]: ...
 
     @property
     @abstractmethod
@@ -65,29 +52,33 @@ class EventLoopScheduler(Scheduler):
                 break
 
             elif self.immediate_tasks:
-                task, weight, cancellation, stack = (
-                    self.immediate_tasks.popleft()
-                )
+                entry = self.immediate_tasks.popleft()
 
                 self._execute_task(
-                    task=task,
-                    weight=weight,
-                    stack=stack,
-                    cancellation=cancellation,
+                    task=entry.task,
+                    weight=entry.weight,
+                    stack=entry.stack,
+                    cancellation=entry.cancellation,
                 )
 
             elif self.delayed_tasks:
-                scheduled_time, task, weight, cancellation, stack = self.delayed_tasks[0]
+                schedule_due = False
+                entry = None
 
-                timedelta = datetime.datetime.now() - scheduled_time
+                with self.delayed_task_lock:
+                    entry = self.delayed_tasks[0]
+                    if datetime.timedelta(0) <= datetime.datetime.now() - entry.duetime:
+                        entry = heapq.heappop(self.delayed_tasks)
+                        schedule_due = True
 
-                if datetime.timedelta(0) < timedelta:
-                    self.delayed_tasks.pop(0)
-                    self.immediate_tasks.append((task, weight, cancellation, stack))
+                if schedule_due:
+                    self.immediate_tasks.append(entry)
 
                 else:
-                    with self.lock:
-                        self.condition.wait(timedelta.total_seconds())
+                    timedelta = (datetime.datetime.now() - entry.duetime).total_seconds()
+                    if 0 < timedelta:
+                        with self.lock:
+                            self.condition.wait(timedelta)
 
             else:
                 with self.lock:
@@ -104,9 +95,18 @@ class EventLoopScheduler(Scheduler):
         weight: int,
         cancellation: Cancellation | None = None,
     ):
-        stack = get_frame_summary()
+        # stack = get_frame_summary()
 
-        self.immediate_tasks.append((task, weight, cancellation, stack))
+        # self.immediate_tasks.append((task, weight, cancellation, stack))
+
+        entry = ScheduledTask(
+            task=task,
+            weight=weight,
+            cancellation=cancellation,
+            stack=get_frame_summary()
+        )
+
+        self.immediate_tasks.append(entry)
 
         with self.lock:
             self.condition.notify()
@@ -124,19 +124,17 @@ class EventLoopScheduler(Scheduler):
         weight: int,
         cancellation: Cancellation | None = None,
     ):
-        stack = get_frame_summary()
-
-        duetime_datetime = datetime.datetime.now() + datetime.timedelta(duetime)
-
-        entry = duetime_datetime, task, weight, cancellation, stack
+        duetime_datetime = datetime.datetime.now() + datetime.timedelta(seconds=duetime)
+        entry = DelayedScheduledTask(
+            duetime=duetime_datetime,
+            task=task,
+            weight=weight,
+            cancellation=cancellation,
+            stack=get_frame_summary()
+        )
 
         with self.delayed_task_lock:
-            for idx, (d, *_) in enumerate(self.delayed_tasks):
-                if duetime_datetime <= d:
-                    self.delayed_tasks.insert(idx, entry)
-                    break
-            else:
-                self.delayed_tasks.append(entry)
+            heapq.heappush(self.delayed_tasks, entry)
 
         with self.lock:
             self.condition.notify()

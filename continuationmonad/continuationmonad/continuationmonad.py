@@ -5,7 +5,7 @@ from typing import Callable, Generator, Iterable, override
 
 from continuationmonad.utils.framesummary import get_frame_summary
 from continuationmonad.continuationmonadtree.subscribeargs import SubscribeArgs
-from continuationmonad.continuationmonadtree.deferredobserver import DeferredObserver
+from continuationmonad.continuationmonadtree.deferredhandler import DeferredHandler
 from continuationmonad.continuationmonadtree.nodes import (
     ContinuationMonadNode,
     SingleChildContinuationMonadNode,
@@ -42,9 +42,9 @@ class ContinuationMonad[U](SingleChildContinuationMonadNode[U, U]):
     # operations
     ############
 
-    def connect(self, observers: Iterable[DeferredObserver]):
+    def connect(self, handlers: Iterable[DeferredHandler]):
         return self.copy(
-            child=init_connect(child=self.child, observers=observers)
+            child=init_connect(child=self.child, handlers=handlers)
         )
 
     def flat_map[V](self, func: Callable[[U], ContinuationMonadNode[V]]):

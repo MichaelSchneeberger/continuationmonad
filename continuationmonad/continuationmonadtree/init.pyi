@@ -1,12 +1,14 @@
 from typing import Callable, Iterable
 
+from continuationmonad.continuationmonadtree.sources.schedulewithdelay import ScheduleWithDelay
+from continuationmonad.scheduler.scheduler import Scheduler
 from continuationmonad.utils.framesummary import FrameSummary
 from continuationmonad.scheduler.continuationcertificate import (
     ContinuationCertificate,
 )
 from continuationmonad.scheduler.instantscheduler import InstantScheduler
 from continuationmonad.scheduler.schedulers.trampoline import Trampoline
-from continuationmonad.continuationmonadtree.deferredobserver import DeferredObserver
+from continuationmonad.continuationmonadtree.deferredhandler import DeferredHandler
 from continuationmonad.continuationmonadtree.nodes import ContinuationMonadNode
 from continuationmonad.continuationmonadtree.operations.zip import Zip
 from continuationmonad.continuationmonadtree.sources.scheduleon import ScheduleOn
@@ -25,10 +27,10 @@ from continuationmonad.continuationmonadtree.sources.fromvalue import FromValue
 
 def init_connect[U](
     child: ContinuationMonadNode[U],
-    observers: Iterable[DeferredObserver[U]],
+    handlers: Iterable[DeferredHandler[U]],
 ) -> Connect[U]: ...
 def init_defer[U](
-    func: Callable[[Trampoline, DeferredObserver[U]], ContinuationCertificate],
+    func: Callable[[Trampoline, DeferredHandler[U]], ContinuationCertificate],
     stack: tuple[FrameSummary, ...],
 ) -> Defer[U]: ...
 def init_flat_map[U, V](
@@ -46,6 +48,11 @@ def init_map[U, V](
 def init_schedule_on(
     scheduler: InstantScheduler,
 ) -> ScheduleOn: ...
+
+def init_schedule_with_delay(
+    duetime: float,
+    scheduler: Scheduler,
+) -> ScheduleWithDelay: ...
 
 class init_zip[U]:
     def __new__(

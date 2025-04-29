@@ -4,10 +4,10 @@ from continuationmonad.scheduler.init import init_trampoline
 from continuationmonad.scheduler.instantscheduler import InstantScheduler
 from continuationmonad.scheduler.schedulers.trampoline import Trampoline
 from continuationmonad.continuationmonadtree.subscribeargs import SubscribeArgs
-from continuationmonad.continuationmonadtree.nodes import ContinuationMonadNode
+from continuationmonad.continuationmonadtree.nodes import ContinuationMonadLeave
 
 
-class ScheduleOn(ContinuationMonadNode[None]):
+class ScheduleOn(ContinuationMonadLeave[None]):
     def __str__(self) -> str:
         return f"schedule_on({self.scheduler})"
 
@@ -15,7 +15,7 @@ class ScheduleOn(ContinuationMonadNode[None]):
     @abstractmethod
     def scheduler(self) -> InstantScheduler: ...
 
-    def subscribe(
+    def _subscribe(
         self,
         args: SubscribeArgs,
     ):
@@ -24,7 +24,7 @@ class ScheduleOn(ContinuationMonadNode[None]):
             case Trampoline() as trampoline:
 
                 def trampoline_task():
-                    return args.on_next(trampoline, trampoline)
+                    return args.observer.on_success(trampoline, trampoline)
 
                 return trampoline.schedule(
                     task=trampoline_task,
@@ -38,7 +38,7 @@ class ScheduleOn(ContinuationMonadNode[None]):
                     trampoline = init_trampoline()
 
                     def trampoline_task():
-                        return args.on_next(trampoline, trampoline)
+                        return args.observer.on_success(trampoline, trampoline)
 
                     return trampoline.run(
                         trampoline_task,

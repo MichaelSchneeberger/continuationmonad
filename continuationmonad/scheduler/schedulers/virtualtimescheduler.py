@@ -1,0 +1,141 @@
+from abc import abstractmethod
+import heapq
+from threading import Lock
+from typing import Callable, Deque, override
+
+from continuationmonad.scheduler.cancellation import Cancellation
+from continuationmonad.scheduler.continuationcertificate import ContinuationCertificate
+from continuationmonad.scheduler.scheduledtask import VirtualScheduledTask, ScheduledTask
+from continuationmonad.scheduler.scheduler import Scheduler
+from continuationmonad.utils.framesummary import get_frame_summary
+
+
+class VirtualTimeScheduler(Scheduler):
+    @property
+    @abstractmethod
+    def immediate_tasks(
+        self,
+    ) -> Deque[ScheduledTask]: ...
+
+    @property
+    @abstractmethod
+    def delayed_tasks(
+        self,
+    ) -> list[VirtualScheduledTask]: ...
+
+    @property
+    @abstractmethod
+    def lock(self) -> Lock: ...
+
+    @property
+    @abstractmethod
+    def delayed_task_lock(self) -> Lock: ...
+
+    @property
+    @abstractmethod
+    def time(self) -> float: ...
+
+    @time.setter
+    @abstractmethod
+    def time(self, val: float): ...
+
+    @property
+    @abstractmethod
+    def idle(self) -> bool: ...
+
+    @idle.setter
+    @abstractmethod
+    def idle(selfc, val: bool): ...
+
+    @override
+    def schedule(
+        self,
+        task: Callable[[], ContinuationCertificate],
+        weight: int,
+        cancellation: Cancellation | None = None,
+    ):
+        entry = ScheduledTask(
+            task=task,
+            weight=weight,
+            cancellation=cancellation,
+            stack=get_frame_summary()
+        )
+
+        self.immediate_tasks.append(entry)
+
+        return self._create_certificate(
+            weight=weight,
+            stack=get_frame_summary(),
+        )
+        
+    @override
+    def schedule_relative(
+        self,
+        duetime: float,
+        task: Callable[[], ContinuationCertificate],
+        weight: int,
+        cancellation: Cancellation | None = None,
+    ):
+        entry = VirtualScheduledTask(
+            duetime=self.time + duetime,
+            task=task,
+            weight=weight,
+            cancellation=cancellation,
+            stack=get_frame_summary()
+        )
+
+        with self.delayed_task_lock:
+            heapq.heappush(self.delayed_tasks, entry)
+
+        return self._create_certificate(
+            weight=weight,
+            stack=get_frame_summary(),
+        )
+
+    def advance_to(self, time: float):
+        with self.lock:
+            idle = self.idle
+            self.idle = False
+
+        while True:
+            if self.immediate_tasks:
+                entry = self.immediate_tasks.popleft()
+
+                self._execute_task(
+                    task=entry.task,
+                    weight=entry.weight,
+                    stack=entry.stack,
+                    cancellation=entry.cancellation,
+                )
+
+            elif self.delayed_tasks:
+                # print('delayed tasks!')
+
+                schedule_due = False
+                entry = None
+
+                with self.delayed_task_lock:
+                    entry = self.delayed_tasks[0]
+                    if entry.duetime <= self.time:
+                        entry = heapq.heappop(self.delayed_tasks)
+                        schedule_due = True
+
+
+                if schedule_due:
+                    self.immediate_tasks.append(entry)
+
+                elif entry.duetime <= time:
+                    self.time = entry.duetime
+                    
+                else:
+                    break
+
+            else:
+                with self.lock:
+                    if self.immediate_tasks or self.delayed_tasks:
+                        pass
+
+                    else:
+                        self.idle = True
+                        break
+

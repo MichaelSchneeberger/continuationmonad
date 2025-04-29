@@ -1,10 +1,10 @@
 from abc import abstractmethod
 
 from continuationmonad.continuationmonadtree.subscribeargs import SubscribeArgs
-from continuationmonad.continuationmonadtree.nodes import ContinuationMonadNode
+from continuationmonad.continuationmonadtree.nodes import ContinuationMonadLeave
 
 
-class FromValue[U](ContinuationMonadNode[U]):
+class FromValue[U](ContinuationMonadLeave[U]):
     def __str__(self) -> str:
         return f"from_value({self.value})"
 
@@ -12,14 +12,14 @@ class FromValue[U](ContinuationMonadNode[U]):
     @abstractmethod
     def value(self) -> U: ...
 
-    def subscribe(
+    def _subscribe(
         self,
         args: SubscribeArgs,
     ):
-        return args.on_next(args.trampoline, self.value)
+        return args.observer.on_success(args.trampoline, self.value)
 
         # def trampoline_task():
-        #     return args.on_next(args.trampoline, self.value)
+        #     return args.observer.on_success(args.trampoline, self.value)
 
         # return args.trampoline.schedule(
         #     task=trampoline_task,

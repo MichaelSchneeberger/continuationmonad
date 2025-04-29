@@ -3,6 +3,7 @@ from continuationmonad.scheduler.init import (
     init_event_loop_scheduler as _init_event_loop_scheduler,
     init_main_scheduler as _init_main_scheduler,
     init_trampoline as _init_trampoline,
+    init_virtual_time_scheduler as _init_virtual_time_scheduler,
 )
 from continuationmonad.continuationmonadtree.subscribeargs import (
     init_subscribe_args as _init_subscribe_args,
@@ -16,6 +17,7 @@ from continuationmonad.continuationmonad.from_ import (
     from_ as _from_value,
     zip as _zip,
     schedule_on as _schedule_on,
+    schedule_with_delay as _schedule_with_delay,
     schedule_trampoline as _schedule_trampoline,
     tail_rec as _tail_rec,
 )
@@ -32,6 +34,7 @@ init_current_thread_scheduler = _init_current_thread_scheduler
 init_event_loop_scheduler = _init_event_loop_scheduler
 init_main_scheduler = _init_main_scheduler
 init_trampoline = _init_trampoline
+init_virtual_time_scheduler = _init_virtual_time_scheduler
 
 
 # Create continuation source
@@ -41,6 +44,7 @@ from_ = _from_value
 get_trampoline = _get_trampoline
 schedule_trampoline = _schedule_trampoline
 schedule_on = _schedule_on
+schedule_with_delay = _schedule_with_delay
 tail_rec = _tail_rec
 
 

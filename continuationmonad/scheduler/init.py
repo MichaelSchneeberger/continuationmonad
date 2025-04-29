@@ -9,6 +9,7 @@ from dataclassabc import dataclassabc
 
 from continuationmonad.scheduler.cancellation import Cancellation
 from continuationmonad.scheduler.continuationcertificate import ContinuationCertificate
+from continuationmonad.scheduler.scheduledtask import DelayedScheduledTask, ScheduledTask, VirtualScheduledTask
 from continuationmonad.scheduler.schedulers.currentthreadscheduler import (
     CurrentThreadScheduler,
 )
@@ -16,7 +17,9 @@ from continuationmonad.scheduler.schedulers.eventloopscheduler import (
     EventLoopScheduler,
 )
 from continuationmonad.scheduler.schedulers.mainscheduler import MainScheduler
+from continuationmonad.scheduler.schedulers.maintrampoline import MainTrampoline
 from continuationmonad.scheduler.schedulers.trampoline import Trampoline
+from continuationmonad.scheduler.schedulers.virtualtimescheduler import VirtualTimeScheduler
 from continuationmonad.utils.framesummary import FrameSummary
 
 
@@ -26,23 +29,8 @@ from continuationmonad.utils.framesummary import FrameSummary
 
 @dataclassabc
 class CurrentThreadSchedulerImpl(CurrentThreadScheduler):
-    immediate_tasks: Deque[
-        tuple[
-            Callable[[], ContinuationCertificate],
-            int,
-            Cancellation | None,
-            tuple[FrameSummary, ...],
-        ]
-    ]
-    delayed_tasks: list[
-        tuple[
-            datetime.datetime,
-            Callable[[], ContinuationCertificate],
-            int,
-            Cancellation | None,
-            tuple[FrameSummary, ...],
-        ]
-    ]
+    immediate_tasks: Deque[ScheduledTask]
+    delayed_tasks: list[DelayedScheduledTask]
     lock: Lock
     delayed_task_lock: Lock
     condition: Condition
@@ -65,23 +53,8 @@ def init_current_thread_scheduler():
 
 @dataclassabc(frozen=True)
 class EventLoopSchedulerImpl(EventLoopScheduler):
-    immediate_tasks: Deque[
-        tuple[
-            Callable[[], ContinuationCertificate],
-            int,
-            Cancellation | None,
-            tuple[FrameSummary, ...],
-        ]
-    ]
-    delayed_tasks: list[
-        tuple[
-            datetime.datetime,
-            Callable[[], ContinuationCertificate],
-            int,
-            Cancellation | None,
-            tuple[FrameSummary, ...],
-        ]
-    ]
+    immediate_tasks: Deque[ScheduledTask]
+    delayed_tasks: list[DelayedScheduledTask]
     lock: Lock
     delayed_task_lock: Lock
     condition: Condition
@@ -108,23 +81,8 @@ def init_event_loop_scheduler():
 
 @dataclassabc
 class MainSchedulerImpl(MainScheduler):
-    immediate_tasks: Deque[
-        tuple[
-            Callable[[], ContinuationCertificate],
-            int,
-            Cancellation | None,
-            tuple[FrameSummary, ...],
-        ]
-    ]
-    delayed_tasks: list[
-        tuple[
-            datetime.datetime,
-            Callable[[], ContinuationCertificate],
-            int,
-            Cancellation | None,
-            tuple[FrameSummary, ...],
-        ]
-    ]
+    immediate_tasks: Deque[ScheduledTask]
+    delayed_tasks: list[DelayedScheduledTask]
     lock: Lock
     delayed_task_lock: Lock
     condition: Condition
@@ -147,17 +105,31 @@ def init_main_scheduler():
 
 @dataclassabc(frozen=True)
 class TrampolineImpl(Trampoline):
-    queue: Deque[
-        tuple[
-            Callable[[], ContinuationCertificate],
-            int,
-            Cancellation | None,
-            tuple[FrameSummary, ...],
-        ]
-    ]
+    queue: Deque[ScheduledTask]
 
 
 def init_trampoline():
     return TrampolineImpl(
         queue=deque(),
+    )
+
+
+@dataclassabc
+class VirtualTimeSchedulerImpl(VirtualTimeScheduler):
+    immediate_tasks: Deque[ScheduledTask]
+    delayed_tasks: list[VirtualScheduledTask]
+    lock: Lock
+    delayed_task_lock: Lock
+    time: float
+    idle: bool
+
+
+def init_virtual_time_scheduler():
+    return VirtualTimeSchedulerImpl(
+        immediate_tasks=deque(),
+        delayed_tasks=[],
+        lock=Lock(),
+        delayed_task_lock= Lock(),
+        idle=True,
+        time=0,
     )

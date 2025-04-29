@@ -1,15 +1,17 @@
 from abc import abstractmethod
+import traceback
 from typing import Callable
 
-from continuationmonad.continuationmonadtree.deferredobserver import DeferredObserver
+from continuationmonad.continuationmonadtree.observer import Observer
+from continuationmonad.scheduler.schedulers.trampoline import Trampoline
+from continuationmonad.utils.framesummary import FrameSummaryMixin
 from continuationmonad.exceptions import ContinuationMonadOperatorException
 from continuationmonad.scheduler.continuationcertificate import (
     ContinuationCertificate,
 )
+from continuationmonad.continuationmonadtree.deferredhandler import DeferredHandler
 from continuationmonad.continuationmonadtree.subscribeargs import SubscribeArgs
 from continuationmonad.continuationmonadtree.nodes import ContinuationMonadNode
-from continuationmonad.scheduler.schedulers.trampoline import Trampoline
-from continuationmonad.utils.framesummary import FrameSummaryMixin
 
 
 class Defer[U](FrameSummaryMixin, ContinuationMonadNode[U]):
@@ -21,38 +23,60 @@ class Defer[U](FrameSummaryMixin, ContinuationMonadNode[U]):
     def func(
         self,
     ) -> Callable[
-        [Trampoline, DeferredObserver], ContinuationMonadNode[ContinuationCertificate]
+        [Trampoline, DeferredHandler], ContinuationMonadNode[ContinuationCertificate]
     ]: ...
 
     def subscribe(
         self,
         args: SubscribeArgs,
     ):
-        deferred_observer = DeferredObserver(
-            on_next=args.on_next,
+        deferred_handler = DeferredHandler(
+            observer=args.observer,
             weight=args.weight,
             cancellation=args.cancellation,
         )
 
         try:
-            continuation = self.func(args.trampoline, deferred_observer)
-            
-        except ContinuationMonadOperatorException:
-            raise
+            continuation = self.func(args.trampoline, deferred_handler)
 
-        except Exception:
-            raise ContinuationMonadOperatorException(
-                self.to_operator_exception_message(stack=self.stack)
-            )
-        
-        if isinstance(continuation, ContinuationCertificate):
-            assert continuation.weight == args.weight, f'{continuation.weight} does not match {args.weight}'
-
-            return continuation
-        
-        else:
-            return continuation.subscribe(
-                args=args.copy(
-                    on_next=lambda _, v: v,
+        except ContinuationMonadOperatorException as exception:
+            exception = ContinuationMonadOperatorException(
+                "\n".join(
+                    (
+                        exception.args[0],
+                        self.to_execution_exception_message(traceback.format_exc()),
+                    )
                 )
             )
+            return args.observer.on_error(exception)
+
+        except Exception:
+            exception = ContinuationMonadOperatorException(
+                "\n".join(
+                    (
+                        self.to_execution_exception_message(traceback.format_exc()),
+                        self.to_operator_exception_message(stack=self.stack),
+                    )
+                )
+            )
+            return args.observer.on_error(exception)
+
+        if isinstance(continuation, ContinuationCertificate):
+            assert continuation.weight == args.weight, (
+                f"{continuation.weight} does not match {args.weight}"
+            )
+
+            return continuation
+
+        else:
+            class DeferObserver(Observer):
+                def on_success(self, _, item: ContinuationCertificate):
+                    return item
+
+                def on_error(self, exception: Exception) -> ContinuationCertificate:
+                    return args.observer.on_error(exception)
+
+
+            return continuation.subscribe(args=args.copy(
+                    observer=DeferObserver(),
+            ))

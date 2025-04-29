@@ -1,21 +1,100 @@
 from abc import abstractmethod
+import traceback
 from typing import Callable
 
+from dataclassabc import dataclassabc
+
 from continuationmonad.exceptions import ContinuationMonadOperatorException
+from continuationmonad.scheduler.cancellation import Cancellation
 from continuationmonad.utils.framesummary import (
+    FrameSummary,
     FrameSummaryMixin,
 )
 from continuationmonad.scheduler.schedulers.trampoline import Trampoline
-from continuationmonad.continuationmonadtree.subscribeargs import SubscribeArgs
+from continuationmonad.continuationmonadtree.subscribeargs import (
+    SubscribeArgs,
+    init_subscribe_args,
+)
 from continuationmonad.continuationmonadtree.nodes import (
     ContinuationMonadNode,
     SingleChildContinuationMonadNode,
 )
+from continuationmonad.continuationmonadtree.observer import Observer
 
 
-class FlatMap[U, V](
-    FrameSummaryMixin, SingleChildContinuationMonadNode[U, V]
-):
+@dataclassabc
+class FlatMapObserver[U, V](FrameSummaryMixin, Observer[U]):
+    observer: Observer[V]
+    func: Callable[[U], ContinuationMonadNode[V]]
+    stack: tuple[FrameSummary, ...]
+    weight: int
+    cancellation: Cancellation | None
+
+    def on_success(self, trampoline: Trampoline, item: U):
+        try:
+            continuation = self.func(item)
+
+        except ContinuationMonadOperatorException as exception:
+            exception = ContinuationMonadOperatorException(
+                "\n".join(
+                    (
+                        exception.args[0],
+                        self.to_execution_exception_message(traceback.format_exc()),
+                    )
+                )
+            )
+            return self.observer.on_error(exception)
+
+        except Exception:
+            exception = ContinuationMonadOperatorException(
+                "\n".join(
+                    (
+                        self.to_execution_exception_message(traceback.format_exc()),
+                        self.to_operator_exception_message(stack=self.stack),
+                    )
+                )
+            )
+            return self.observer.on_error(exception)
+
+        try:
+            certificate = continuation.subscribe(
+                args=init_subscribe_args(
+                    observer=self.observer,
+                    trampoline=trampoline,
+                    weight=self.weight,
+                    cancellation=self.cancellation,
+                )
+            )
+
+        except ContinuationMonadOperatorException as exception:
+            exception = ContinuationMonadOperatorException(
+                "\n".join(
+                    (
+                        exception.args[0],
+                        self.to_execution_exception_message(traceback.format_exc()),
+                    )
+                )
+            )
+            return self.observer.on_error(exception)
+
+        except Exception:
+            exception = ContinuationMonadOperatorException(
+                "\n".join(
+                    (
+                        self.to_execution_exception_message(traceback.format_exc()),
+                        self.to_operator_exception_message(stack=self.stack),
+                    )
+                )
+            )
+            return self.observer.on_error(exception)
+
+        return certificate
+
+    def on_error(self, exception: Exception):
+        return self.observer.on_error(exception)
+
+
+class FlatMap[U, V](FrameSummaryMixin, SingleChildContinuationMonadNode[U, V]):
     def __str__(self) -> str:
         return f"flat_map({self.child}, {self.func})"
 
@@ -27,103 +106,14 @@ class FlatMap[U, V](
         self,
         args: SubscribeArgs,
     ):
-        def n_on_next(n_trampoline: Trampoline, value: U):
-
-            try:
-                continuation = self.func(value)
-                
-            except ContinuationMonadOperatorException:
-                raise
-
-            except Exception:
-                raise ContinuationMonadOperatorException(
-                    self.to_operator_exception_message(stack=self.stack)
+        return self.child.subscribe(
+            args=args.copy(
+                observer=FlatMapObserver(
+                    observer=args.observer,
+                    func=self.func,
+                    stack=self.stack,
+                    weight=args.weight,
+                    cancellation=args.cancellation,
                 )
-            
-            try:
-                certificate = continuation.subscribe(
-                    args=args.copy(
-                        on_next=args.on_next,
-                        trampoline=n_trampoline,
-                    )
-                )
-
-            except ContinuationMonadOperatorException:
-                raise
-
-            except Exception:
-                raise ContinuationMonadOperatorException(
-                    self.to_operator_exception_message(stack=self.stack)
-                )
-
-            return certificate
-
-        return self.child.subscribe(args=args.copy(on_next=n_on_next))
-
-
-
-
-
-# @dataclassabc
-# class FlatMapObserver[ChildU, U](FrameSummaryMixin, Observer):
-#     observer: Observer
-#     func: Callable[[ChildU], ContinuationMonadNode[U]]
-#     stack: tuple[FrameSummary, ...]
-#     weight: int
-#     cancellation: IsCancelled | None
-
-#     def on_next(self, trampoline: Trampoline, value: ChildU):
-
-#         try:
-#             continuation = self.func(value)
-
-#         except ContinuationMonadOperatorException:
-#             raise
-
-#         except Exception:
-#             msg = to_operator_exception_message(stack=self.stack)
-#             raise ContinuationMonadOperatorException(f'{msg}')
-        
-#         try:
-#             certificate = continuation.subscribe(
-#                 args=init_subscribe_args(
-#                     observer=self.observer,
-#                     trampoline=trampoline,
-#                 )
-#             )
-
-#         except ContinuationMonadOperatorException:
-#             raise
-
-#         except Exception:
-#             msg = to_operator_exception_message(stack=self.stack)
-#             raise ContinuationMonadOperatorException(f'{msg}')
-
-#         return certificate
-
-
-# class FlatMap[U, ChildU](
-#     FrameSummaryMixin, SingleChildContinuationMonadNode[U, ChildU]
-# ):
-#     def __str__(self) -> str:
-#         return f"flat_map({self.child}, {self.func})"
-
-#     @property
-#     @abstractmethod
-#     def func(self) -> Callable[[ChildU], ContinuationMonadNode[U]]: ...
-
-#     def subscribe(
-#         self,
-#         args: SubscribeArgs,
-#     ):
-
-#         return self.child.subscribe(args=init_subscribe_args(
-#             observer=FlatMapObserver(
-#                 observer=args.observer,
-#                 weight=args.weight,
-#                 cancellation=args.cancellation,
-#                 func=self.func,
-#                 stack=self.stack,
-#             ),
-#             trampoline=args.trampoline,
-#         ))
+            )
+        )

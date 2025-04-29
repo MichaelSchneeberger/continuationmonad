@@ -3,8 +3,9 @@ from typing import Callable, Iterable
 from continuationmonad.continuationmonad.continuationmonad import ContinuationMonad
 from continuationmonad.continuationmonad.init import init_continuation_monad
 
-from continuationmonad.continuationmonadtree.deferredobserver import DeferredObserver
+from continuationmonad.continuationmonadtree.deferredhandler import DeferredHandler
 from continuationmonad.continuationmonadtree.init import (
+    init_schedule_with_delay,
     init_zip,
     init_from_value,
     init_get_trampoline,
@@ -15,6 +16,7 @@ from continuationmonad.scheduler.continuationcertificate import (
     ContinuationCertificate,
 )
 from continuationmonad.scheduler.instantscheduler import InstantScheduler
+from continuationmonad.scheduler.scheduler import Scheduler
 from continuationmonad.scheduler.schedulers.trampoline import Trampoline
 from continuationmonad.utils.framesummary import get_frame_summary
 
@@ -22,7 +24,7 @@ from continuationmonad.utils.framesummary import get_frame_summary
 class defer[U]:
     def __new__(
         _,
-        func: Callable[[Trampoline, DeferredObserver[U]], ContinuationCertificate],
+        func: Callable[[Trampoline, DeferredHandler[U]], ContinuationCertificate],
     ):
         """
         Create a continuation monad that defers the subscription until a source is connected.
@@ -40,14 +42,14 @@ class defer[U]:
 
 
         ``` python
-        from continuationmonad.typing import DeferredObserver
+        from continuationmonad.typing import DeferredHandler
 
-        deferred_observers: list[DeferredObserver] = [None]  # type: ignore
+        deferred_handlers: list[DeferredHandler] = [None]  # type: ignore
         certificates: list[ContinuationCertificate] = [None] # type: ignore
 
-        def func(_, observer: DeferredObserver):
-            deferred_observers[0] = observer
-            return certificates[0]
+        def func(_, handler: DeferredHandler):
+            deferred_handlers[0] = handler
+            return deferred_handlers[0]
 
         @do()
         def defer_and_connect():
@@ -56,7 +58,7 @@ class defer[U]:
             certificates[0] = continuationmonad.fork(
                 source = (
                     continuationmonad.from_(None)
-                    .flat_map(lambda _: continuationmonad.from_('defer').connect(deferred_observers))
+                    .flat_map(lambda _: continuationmonad.from_('defer').connect(deferred_handlers))
                     .map(lambda cs: cs[0])
                 ),
                 scheduler=trampoline,
@@ -74,7 +76,7 @@ def zip[U](
     sources: Iterable[ContinuationMonad[U]],
 ):
     """
-    Create a new continuation monad from two (or more) continuation monads by combining their items 
+    Create a new continuation monad from two (or more) continuation monads by combining their items
     in a tuple.
 
     Args:
@@ -105,6 +107,12 @@ def get_trampoline():
 
 def schedule_on(scheduler: InstantScheduler):
     return init_continuation_monad(init_schedule_on(scheduler=scheduler))
+
+
+def schedule_with_delay(scheduler: Scheduler, duetime: float):
+    return init_continuation_monad(
+        init_schedule_with_delay(duetime=duetime, scheduler=scheduler)
+    )
 
 
 def schedule_trampoline():
