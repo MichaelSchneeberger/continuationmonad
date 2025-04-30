@@ -4,7 +4,7 @@ from typing import Callable, Deque, override
 import datetime
 import heapq
 
-from continuationmonad.scheduler.mainschedulermixin import MainSchedulerMixin
+from continuationmonad.scheduler.mainschedulermixin import MainScheduler
 from continuationmonad.scheduler.scheduledtask import DelayedScheduledTask, ScheduledTask
 from continuationmonad.utils.framesummary import get_frame_summary
 from continuationmonad.scheduler.cancellation import Cancellation
@@ -90,6 +90,10 @@ class EventLoopScheduler(Scheduler):
                         self.condition.wait()
 
     @override
+    def now(self):
+        return datetime.datetime.now()
+
+    @override
     def schedule(
         self,
         task: Callable[[], ContinuationCertificate],
@@ -126,8 +130,24 @@ class EventLoopScheduler(Scheduler):
         cancellation: Cancellation | None = None,
     ):
         duetime_datetime = datetime.datetime.now() + datetime.timedelta(seconds=duetime)
-        entry = DelayedScheduledTask(
+
+        return self.schedule_absolute(
             duetime=duetime_datetime,
+            task=task,
+            weight=weight,
+            cancellation=cancellation,
+        )
+
+    @override
+    def schedule_absolute(
+        self,
+        duetime: datetime.datetime,
+        task: Callable[[], ContinuationCertificate],
+        weight: int,
+        cancellation: Cancellation | None = None,
+    ):
+        entry = DelayedScheduledTask(
+            duetime=duetime,
             task=task,
             weight=weight,
             cancellation=cancellation,
@@ -146,7 +166,7 @@ class EventLoopScheduler(Scheduler):
         )
 
 
-class MainScheduler(MainSchedulerMixin, EventLoopScheduler):
+class MainScheduler(MainScheduler, EventLoopScheduler):
     def stop(self):
         """
         The stop function is capable of creating the finishing Continuation

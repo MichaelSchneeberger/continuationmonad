@@ -1,6 +1,8 @@
+import datetime
 from typing import Callable, Iterable
 
-from continuationmonad.continuationmonadtree.sources.schedulewithdelay import ScheduleWithDelay
+from continuationmonad.continuationmonadtree.sources.scheduleabsolute import ScheduleAbsolute
+from continuationmonad.continuationmonadtree.sources.schedulerelative import ScheduleRelative
 from continuationmonad.scheduler.scheduler import Scheduler
 from continuationmonad.utils.framesummary import FrameSummary
 from continuationmonad.scheduler.continuationcertificate import (
@@ -49,15 +51,17 @@ def init_map[U, V](
 def init_schedule_on(
     scheduler: InstantScheduler,
 ) -> ScheduleOn: ...
-
-def init_schedule_with_delay(
+def init_schedule_relative(
     duetime: float,
     scheduler: Scheduler,
-) -> ScheduleWithDelay: ...
+) -> ScheduleRelative: ...
+def init_schedule_absolute(
+    duetime: datetime.datetime,
+    scheduler: Scheduler,
+) -> ScheduleAbsolute: ...
 
 class init_zip[U]:
     def __new__(
         _,
         children: tuple[ContinuationMonadNode[U], ...],
     ) -> Zip[tuple[U, ...]]: ...
-

@@ -1,3 +1,4 @@
+import datetime
 from typing import Callable, Iterable
 
 from continuationmonad.continuationmonad.continuationmonad import ContinuationMonad
@@ -6,7 +7,8 @@ from continuationmonad.continuationmonad.init import init_continuation_monad
 from continuationmonad.continuationmonadtree.deferredhandler import DeferredHandler
 from continuationmonad.continuationmonadtree.init import (
     init_error,
-    init_schedule_with_delay,
+    init_schedule_absolute,
+    init_schedule_relative,
     init_zip,
     init_from_value,
     init_get_trampoline,
@@ -114,16 +116,23 @@ def schedule_on(scheduler: InstantScheduler):
     return init_continuation_monad(init_schedule_on(scheduler=scheduler))
 
 
-def schedule_with_delay(scheduler: Scheduler, duetime: float):
+def schedule_relative(scheduler: Scheduler, duetime: float):
     return init_continuation_monad(
-        init_schedule_with_delay(duetime=duetime, scheduler=scheduler)
+        init_schedule_relative(duetime=duetime, scheduler=scheduler)
+    )
+
+
+def schedule_absolute(scheduler: Scheduler, duetime: datetime.datetime):
+    return init_continuation_monad(
+        init_schedule_absolute(duetime=duetime, scheduler=scheduler)
     )
 
 
 def schedule_trampoline():
-    return get_trampoline().flat_map(
-        lambda trampoline: schedule_on(scheduler=trampoline)
-    )
+    return get_trampoline()
+    # return get_trampoline().flat_map(
+    #     lambda trampoline: schedule_on(scheduler=trampoline)
+    # )
 
 
 def tail_rec(func: Callable[[], ContinuationMonad]):

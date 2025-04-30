@@ -3,9 +3,10 @@ from typing import Callable
 
 from continuationmonad.scheduler.cancellation import Cancellation
 from continuationmonad.scheduler.continuationcertificate import ContinuationCertificate
+from continuationmonad.scheduler.scheduler import Scheduler
 
 
-class MainSchedulerMixin(ABC):
+class MainScheduler(Scheduler):
     @abstractmethod
     def stop(self) -> ContinuationCertificate: ...
 

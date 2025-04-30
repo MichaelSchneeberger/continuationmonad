@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import deque
+import datetime
 from threading import Condition, Lock, Thread
 from typing import Deque
 
@@ -61,42 +62,36 @@ class MainSchedulerImpl(EventLoopSchedulerImpl, MainScheduler):
     pass
 
 
-def init_event_loop_scheduler(
-    is_main: bool | None = None,
-):
-    if is_main is None:
-        is_main = False
-
+def init_event_loop_scheduler():
     lock = Lock()
     delayed_task_lock = Lock()
 
-    if is_main:
-        return MainSchedulerImpl(
-            immediate_tasks=deque(),
-            delayed_tasks=[],
-            lock=lock,
-            delayed_task_lock=delayed_task_lock,
-            condition=Condition(lock),
-            is_stopped=False,
-        )
+    scheduler = EventLoopSchedulerImpl(
+        immediate_tasks=deque(),
+        delayed_tasks=[],
+        lock=lock,
+        delayed_task_lock=delayed_task_lock,
+        condition=Condition(lock),
+        is_stopped=False,
+    )
 
-    else:
-        scheduler = EventLoopSchedulerImpl(
-            immediate_tasks=deque(),
-            delayed_tasks=[],
-            lock=lock,
-            delayed_task_lock=delayed_task_lock,
-            condition=Condition(lock),
-            is_stopped=False,
-        )
+    Thread(target=scheduler.start_loop, daemon=True).start()
 
-        Thread(target=scheduler.start_loop, daemon=True).start()
-
-        return scheduler
+    return scheduler
     
 
 def init_main_scheduler():
-    return init_event_loop_scheduler(is_main=True)
+    lock = Lock()
+    delayed_task_lock = Lock()
+
+    return MainSchedulerImpl(
+        immediate_tasks=deque(),
+        delayed_tasks=[],
+        lock=lock,
+        delayed_task_lock=delayed_task_lock,
+        condition=Condition(lock),
+        is_stopped=False,
+    )
 
 
 @dataclassabc(frozen=True)
@@ -118,16 +113,11 @@ class VirtualTimeSchedulerImpl(VirtualTimeScheduler):
     delayed_task_lock: Lock
     time: float
     idle: bool
+    start_datetime: datetime.datetime
 
 
 @dataclassabc(frozen=False)
 class MainVirtualTimeSchedulerImpl(VirtualTimeSchedulerImpl, MainVirtualTimeScheduler):
-    # immediate_tasks: Deque[ScheduledTask]
-    # delayed_tasks: list[VirtualScheduledTask]
-    # lock: Lock
-    # delayed_task_lock: Lock
-    # time: float
-    # idle: bool
     is_stopped: bool
 
 
@@ -146,6 +136,7 @@ def init_virtual_time_scheduler(
             idle=True,
             time=0,
             is_stopped=True,
+            start_datetime=datetime.datetime.now(),
         )
     
     else:
@@ -156,4 +147,5 @@ def init_virtual_time_scheduler(
             delayed_task_lock= Lock(),
             idle=True,
             time=0,
+            start_datetime=datetime.datetime.now(),
         )

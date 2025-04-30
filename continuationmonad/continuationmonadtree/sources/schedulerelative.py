@@ -6,9 +6,9 @@ from continuationmonad.continuationmonadtree.subscribeargs import SubscribeArgs
 from continuationmonad.continuationmonadtree.nodes import ContinuationMonadLeave
 
 
-class ScheduleWithDelay(ContinuationMonadLeave[None]):
+class ScheduleRelative(ContinuationMonadLeave[None]):
     def __str__(self) -> str:
-        return f"schedule_with_delay({self.scheduler}, {self.duetime})"
+        return f"schedule_relative({self.scheduler}, {self.duetime})"
 
     @property
     @abstractmethod

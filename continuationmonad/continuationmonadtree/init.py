@@ -1,8 +1,10 @@
+import datetime
 from typing import Callable, Iterable
 from dataclassabc import dataclassabc
 
-from continuationmonad.continuationmonadtree.sources.schedulewithdelay import (
-    ScheduleWithDelay,
+from continuationmonad.continuationmonadtree.sources.scheduleabsolute import ScheduleAbsolute
+from continuationmonad.continuationmonadtree.sources.schedulerelative import (
+    ScheduleRelative,
 )
 from continuationmonad.scheduler.scheduler import Scheduler
 from continuationmonad.utils.framesummary import FrameSummary
@@ -157,16 +159,32 @@ def init_schedule_on(
 
 
 @dataclassabc(frozen=True)
-class ScheduleWithDelayImpl(ScheduleWithDelay):
+class ScheduleRelativeImpl(ScheduleRelative):
     duetime: float
     scheduler: Scheduler
 
 
-def init_schedule_with_delay(
+def init_schedule_relative(
     duetime: float,
     scheduler: Scheduler,
 ):
-    return ScheduleWithDelayImpl(
+    return ScheduleRelativeImpl(
         duetime=duetime,
         scheduler=scheduler,
     )
+
+@dataclassabc(frozen=True)
+class ScheduleAbsoluteImpl(ScheduleAbsolute):
+    duetime: datetime.datetime
+    scheduler: Scheduler
+
+
+def init_schedule_absolute(
+    duetime: datetime.datetime,
+    scheduler: Scheduler,
+):
+    return ScheduleAbsoluteImpl(
+        duetime=duetime,
+        scheduler=scheduler,
+    )
+

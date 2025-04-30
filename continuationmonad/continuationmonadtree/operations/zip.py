@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from threading import RLock
+from threading import Lock, RLock
 
 from continuationmonad.scheduler.continuationcertificate import ContinuationCertificate
 from continuationmonad.scheduler.schedulers.trampoline import Trampoline
@@ -142,7 +142,7 @@ class OnErrorTransition(ZipTransition):
 class SharedZipMemory:
     observer: Observer
     transition: ZipTransition
-    lock: RLock
+    lock: Lock
 
 
 @dataclass
@@ -208,7 +208,7 @@ class Zip[U](MultiChildrenContinuationMonadNode[U, tuple[U, ...]]):
         shared = SharedZipMemory(
             observer=args.observer,
             transition=None,
-            lock=RLock(),
+            lock=Lock(),
         )
 
         def gen_certificates():

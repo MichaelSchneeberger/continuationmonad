@@ -1,11 +1,12 @@
 from abc import abstractmethod
+import datetime
 import heapq
 from threading import Lock
 from typing import Callable, Deque, override
 
 from continuationmonad.scheduler.cancellation import Cancellation
 from continuationmonad.scheduler.continuationcertificate import ContinuationCertificate
-from continuationmonad.scheduler.mainschedulermixin import MainSchedulerMixin
+from continuationmonad.scheduler.mainschedulermixin import MainScheduler
 from continuationmonad.scheduler.scheduledtask import VirtualScheduledTask, ScheduledTask
 from continuationmonad.scheduler.scheduler import Scheduler
 from continuationmonad.utils.framesummary import get_frame_summary
@@ -34,6 +35,10 @@ class VirtualTimeScheduler(Scheduler):
 
     @property
     @abstractmethod
+    def start_datetime(self) -> datetime.datetime: ...
+
+    @property
+    @abstractmethod
     def time(self) -> float: ...
 
     @time.setter
@@ -47,6 +52,10 @@ class VirtualTimeScheduler(Scheduler):
     @idle.setter
     @abstractmethod
     def idle(selfc, val: bool): ...
+
+    @override
+    def now(self):
+        return self.start_datetime + datetime.timedelta(seconds=self.time)
 
     @override
     def schedule(
@@ -93,6 +102,23 @@ class VirtualTimeScheduler(Scheduler):
             stack=get_frame_summary(),
         )
 
+    @override
+    def schedule_absolute(
+        self,
+        duetime: datetime.datetime,
+        task: Callable[[], ContinuationCertificate],
+        weight: int,
+        cancellation: Cancellation | None = None,
+    ):
+        duetime_time = (duetime - self.start_datetime).total_seconds()
+
+        return self.schedule_relative(
+            duetime=duetime_time,
+            task=task,
+            weight=weight,
+            cancellation=cancellation,
+        )
+
     def advance_to(self, time: float):
         with self.lock:
             idle = self.idle
@@ -131,6 +157,7 @@ class VirtualTimeScheduler(Scheduler):
                     self.time = entry.duetime
                     
                 else:
+                    self.idle = True
                     break
 
             else:
@@ -143,7 +170,7 @@ class VirtualTimeScheduler(Scheduler):
                         break
 
 
-class MainVirtualTimeScheduler(MainSchedulerMixin, VirtualTimeScheduler):
+class MainVirtualTimeScheduler(MainScheduler, VirtualTimeScheduler):
     @property
     @abstractmethod
     def is_stopped(self) -> bool: ...

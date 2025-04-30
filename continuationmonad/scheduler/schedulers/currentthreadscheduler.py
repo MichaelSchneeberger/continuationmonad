@@ -85,6 +85,10 @@ class CurrentThreadScheduler(Scheduler):
                         break
 
     @override
+    def now(self):
+        return datetime.datetime.now()
+
+    @override
     def schedule(
         self,
         task: Callable[[], ContinuationCertificate],
@@ -128,8 +132,23 @@ class CurrentThreadScheduler(Scheduler):
     ):
         duetime_datetime = datetime.datetime.now() + datetime.timedelta(seconds=duetime)
 
-        entry = DelayedScheduledTask(
+        return self.schedule_absolute(
             duetime=duetime_datetime,
+            task=task,
+            weight=weight,
+            cancellation=cancellation,
+        )
+
+    @override
+    def schedule_absolute(
+        self,
+        duetime: datetime.datetime,
+        task: Callable[[], ContinuationCertificate],
+        weight: int,
+        cancellation: Cancellation | None = None,
+    ):
+        entry = DelayedScheduledTask(
+            duetime=duetime,
             task=task,
             weight=weight,
             cancellation=cancellation,

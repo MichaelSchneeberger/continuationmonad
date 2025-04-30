@@ -7,6 +7,9 @@ from continuationmonad.scheduler.continuationcertificate import (
 from continuationmonad.scheduler.instantscheduler import (
     InstantScheduler as _InstantScheduler,
 )
+from continuationmonad.scheduler.mainschedulermixin import (
+    MainScheduler as _MainScheduler,
+)
 from continuationmonad.scheduler.scheduler import Scheduler as _Scheduler
 from continuationmonad.scheduler.schedulers.trampoline import Trampoline as _Trampoline
 from continuationmonad.continuationmonadtree.observer import (
@@ -29,6 +32,7 @@ ContinuationCertificate = _ContinuationCertificate
 InstantScheduler = _InstantScheduler
 Scheduler = _Scheduler
 Trampoline = _Trampoline
+MainScheduler = _MainScheduler
 
 Observer = _Observer
 DeferredHandler = _DeferredHandler
