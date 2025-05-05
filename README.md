@@ -7,7 +7,7 @@ A Python library implementing stack-safe continuations based on schedulers, ensu
 ## Features
 
 * **Trampoline-based**: Stack-safe execution of the continuation monad through trampolining
-* **Continuation certificate**: The execution of the continuation monad is guaranteed to finish, which introduces a small computational overhead
+* **Continuation certificate**: Ensures the execution of a Flowable completes, albeit with some computational overhead.
 * **Scheduler-based**: Explicit control over execution context through different scheduler implementations
 * **Composable operations**: Monadic operators for clean functional pipelines
 
@@ -38,52 +38,31 @@ def count_down(count: int):
         return continuationmonad.tail_rec(lambda: count_down(count - 1))
 
 # runs continuation and returns 0
-result = count_down(5).run()
+result = continuationmonad.run(
+    count_down(5)
+)
 ```
 
 ## Schedulers and Trampolines
 
-A `Scheduler` is an abstract base class (ABC) that defines the core execution interface for managing continuations.
-It defines an abstract `schedule` method that enqueues a task for execution.
-To prevent continuation deadlocks, the scheduled task must return a *continuation certificate*, which can only be obtained by scheduling another task.
-``` python
-class Scheduler:
-    def schedule(
-        self,
-        task: Callable[[], ContinuationCertificate],
-        weight: int,
-    ) -> ContinuationCertificate: ...
-```
+The library provides the following scheduler implementations
 
-A `Trampoline` is a concrete implementation of a scheduler. 
-It uses a simple while loop to process tasks until its internal queue is exhausted.
-Continuations run within a dedicated Trampoline, that can be accessed using the `get_trampline` operator.
-When using the `schedule_on` method, a Trampoline is nested within another scheduler.
-
-
-### Continuation Certificates
-
-Scheduling continuations across multiple threads can lead to continuation deadlocks, where a continuation never produces a result.
-These deadlocks are particularly difficult to debug when the continuation chain includes third-party operators that may be poorly tested or unpredictable.
-To mitigate this, the system enforces the use of *continuation certificates* when scheduling tasks.
-A continuation certificate:
-- Must be returned by a scheduled task
-- Implements a `verify` method that can be called exactly once
-- Can only be created by invoking the `schedule` method of a scheduler
-
-This design guarantees that the only way to complete a scheduled task is by scheduling another task—ensuring progress and avoiding deadlocks by construction.
-A continuation certificate represents proof that a process is running and can only complete when verifying the certificate.
-Each certificate carries a `weight` attribute, which indicates the *logical multiplicity* of the task's execution.
-Although a task is physically executed only once, a weight greater than 1 models the task as being *virtually* executed in parallel that many times.
-<!-- This is useful for balancing, composing, or distributing continuation chains in advanced scheduling scenarios.
-Multiple continuation certificates can be merged into a single one.
-A certificate with a multiplicity greater than 1 can be split into multiple certificates. -->
+- `init_main_scheduler`: Initializes a scheduler that runs in the main thread.
+  It starts execution via the `run()` method, which blocks until `stop()` is called to terminate the scheduler.
+- `init_event_loop_scheduler`: Creates a scheduler that operates on a dedicated background thread.
+  This is useful for offloading tasks from the main thread or isolating execution contexts.
+    ``` python
+    scheduler = continuationmonad.init_event_loop_scheduler()
+    ```
+- `init_trampoline`: Returns a lightweight scheduler that only implements the `schedule()` method.
+  It does not support delayed execution methods like `schedule_relative()` or `schedule_absolute()`.
+  This scheduler runs tasks immediately in a loop until its queue is exhausted.
 
 ## Operations
 
 ### Creating Continuation Monads
 
-- `defer` - creates a continuation monad that defers the subscription until a source is connected (see [example](examples/deferexample.py))
+- `defer` - creates a continuation monad that defers the subscription until a source is connected (see [defer example](examples/deferexample.py))
 - `from_`: Create a continuation monad from a value:
     ``` python
     c = continuationmonad.from_(5)
@@ -105,7 +84,7 @@ A certificate with a multiplicity greater than 1 can be split into multiple cert
 
 ### Transforming operators
 
-- `connect` - connects the continuation monad to deferred one or multiple subscribers (see `defer` operator)
+- `connect` - connects the continuation monad to deferred one or multiple subscribers (see [defer example](examples/deferexample.py))
 - `flat_map` - apply a function to the item emitted by the source and flattens the result
 - `map` - map the item emitted by the source by applying the given function
 
@@ -121,15 +100,16 @@ A certificate with a multiplicity greater than 1 can be split into multiple cert
 
 ### Other operators
 
-- `fork` - runs the continuation monad on a specified trampoline
+- `fork` - runs the continuation monad on a specified trampoline (see [defer example](examples/deferexample.py))
     ``` python
     c = continuationmonad.fork(
-        source=c1,
+        source=source,
         scheduler=scheduler,
         weight=1,               # specify continuation weight
     )
     ```
 - `run` - runs the continuation monad on a new trampoline and returns its result
     ``` python
-    result = c.run()            # execute a continuation monad
+    # execute a continuation monad
+    result = continuationmonad.run(source)
     ```

@@ -1,15 +1,11 @@
 from abc import ABC, abstractmethod
 
-from continuationmonad.continuationmonadtree.observer import Observer
 from continuationmonad.scheduler.continuationcertificate import (
     ContinuationCertificate,
 )
-from continuationmonad.scheduler.init import init_main_scheduler, init_trampoline
 from continuationmonad.continuationmonadtree.subscribeargs import (
     SubscribeArgs,
-    init_subscribe_args,
 )
-from continuationmonad.scheduler.schedulers.trampoline import Trampoline
 
 
 class ContinuationMonadNode[V](ABC):
@@ -18,40 +14,6 @@ class ContinuationMonadNode[V](ABC):
         self,
         args: SubscribeArgs[V],
     ) -> ContinuationCertificate: ...
-    
-    def run(self) -> V:
-        main_scheduler = init_main_scheduler()
-        trampoline = init_trampoline()
-
-        received_exception = []
-        received_item = []
-
-        class MainObserver(Observer):
-            def on_success(self, _, item: V) -> ContinuationCertificate:
-                received_item.append(item)
-                return main_scheduler.stop()
-
-            def on_error(self, _, exception: Exception) -> ContinuationCertificate:
-                received_exception.append(exception)
-                return main_scheduler.stop()
-
-        args = init_subscribe_args(
-            observer=MainObserver(),
-            trampoline=trampoline,
-            weight=1,
-        )
-
-        def schedule_task():
-            def trampoline_task():
-                return self.subscribe(args=args)
-
-            return trampoline.run(trampoline_task, weight=1)
-        main_scheduler.run(schedule_task)
-
-        if received_exception:
-            raise received_exception[0]
-
-        return received_item[0]
 
 
 class ContinuationMonadLeave[U](ContinuationMonadNode[U]):

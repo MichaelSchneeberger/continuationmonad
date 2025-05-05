@@ -30,5 +30,5 @@ def defer_and_connect():
 
     return continuationmonad.defer(func)
 
-result = defer_and_connect().run()
+result = continuationmonad.run(defer_and_connect())
 print(result)

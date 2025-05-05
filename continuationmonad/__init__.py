@@ -26,7 +26,10 @@ from continuationmonad.continuationmonad.from_ import (
     schedule_trampoline as _schedule_trampoline,
     tail_rec as _tail_rec,
 )
-from continuationmonad.continuationmonad.to import fork as _fork
+from continuationmonad.continuationmonad.to import (
+    fork as _fork,
+    run as _run,
+)
 
 
 init_subscribe_args = _init_subscribe_args
@@ -69,6 +72,7 @@ zip = _zip
 #######################################
 
 fork = _fork
+run = _run
 
 
 # Implement your own operator

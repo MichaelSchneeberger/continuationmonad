@@ -39,4 +39,4 @@ class IOOperationsInterpreter(IOOperations):
 interpreter = IOOperationsInterpreter()
 
 # run the program with the IO interpreter
-program_(interpreter).run()
+continuationmonad.run(program_(interpreter))

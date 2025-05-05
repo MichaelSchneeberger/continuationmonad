@@ -33,9 +33,6 @@ class ContinuationMonad[U](SingleChildContinuationMonadNode[U, U]):
     ):
         return self.child.subscribe(args=args)
 
-    def run(self):
-        return self.child.run()
-
     @abstractmethod
     def copy[V](self, child: ContinuationMonadNode[V]) -> ContinuationMonad[V]: ...
 
@@ -43,9 +40,7 @@ class ContinuationMonad[U](SingleChildContinuationMonadNode[U, U]):
     ############
 
     def connect(self, handlers: Iterable[DeferredHandler]):
-        return self.copy(
-            child=init_connect(child=self.child, handlers=handlers)
-        )
+        return self.copy(child=init_connect(child=self.child, handlers=handlers))
 
     def flat_map[V](self, func: Callable[[U], ContinuationMonadNode[V]]):
         return self.copy(
