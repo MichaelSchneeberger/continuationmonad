@@ -165,12 +165,12 @@ class ScheduleRelativeImpl(ScheduleRelative):
 
 
 def init_schedule_relative(
-    duetime: float,
     scheduler: Scheduler,
+    duetime: float,
 ):
     return ScheduleRelativeImpl(
-        duetime=duetime,
         scheduler=scheduler,
+        duetime=duetime,
     )
 
 @dataclassabc(frozen=True)
@@ -180,11 +180,11 @@ class ScheduleAbsoluteImpl(ScheduleAbsolute):
 
 
 def init_schedule_absolute(
-    duetime: datetime.datetime,
     scheduler: Scheduler,
+    duetime: datetime.datetime,
 ):
     return ScheduleAbsoluteImpl(
-        duetime=duetime,
         scheduler=scheduler,
+        duetime=duetime,
     )
 

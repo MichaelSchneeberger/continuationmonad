@@ -2,7 +2,7 @@ from unittest import TestCase
 
 from donotation import do
 
-from continuationmonad.continuationmonad.from_ import from_, schedule_with_delay
+from continuationmonad.continuationmonad.from_ import from_, schedule_relative
 from continuationmonad.continuationmonadtree.init import init_zip
 from continuationmonad.continuationmonadtree.nodes import ContinuationMonadNode
 from continuationmonad.continuationmonadtree.subscribeargs import init_subscribe_args
@@ -36,7 +36,7 @@ class TestZip(TestCase):
         
         @do()
         def gen_source1():
-            yield schedule_with_delay(self.scheduler, 1)
+            yield schedule_relative(self.scheduler, 1)
             return from_(1)
         
         @do()

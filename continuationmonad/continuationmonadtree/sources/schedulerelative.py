@@ -41,8 +41,3 @@ class ScheduleRelative(ContinuationMonadLeave[None]):
             weight=args.weight,
             cancellation=args.cancellation,
         )
-        # return args.trampoline.schedule(
-        #     task=trampoline_task,
-        #     weight=args.weight,
-        #     cancellation=args.cancellation,
-        # )

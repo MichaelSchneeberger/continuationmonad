@@ -76,13 +76,13 @@ class EventLoopScheduler(Scheduler):
                     self.immediate_tasks.append(entry)
 
                 else:
-                    timedelta = (datetime.datetime.now() - entry.duetime).total_seconds()
+                    timedelta = (entry.duetime - datetime.datetime.now()).total_seconds()
                     if 0 < timedelta:
-                        with self.lock:
+                        with self.condition:
                             self.condition.wait(timedelta)
 
             else:
-                with self.lock:
+                with self.condition:
                     if self.immediate_tasks or self.delayed_tasks or self.is_stopped:
                         pass
                     
@@ -113,13 +113,15 @@ class EventLoopScheduler(Scheduler):
 
         self.immediate_tasks.append(entry)
 
-        with self.lock:
+        with self.condition:
             self.condition.notify()
 
-        return self._create_certificate(
+        certificate = self._create_certificate(
             weight=weight,
             stack=get_frame_summary(),
         )
+
+        return certificate
 
     @override
     def schedule_relative(
@@ -157,7 +159,7 @@ class EventLoopScheduler(Scheduler):
         with self.delayed_task_lock:
             heapq.heappush(self.delayed_tasks, entry)
 
-        with self.lock:
+        with self.condition:
             self.condition.notify()
 
         return self._create_certificate(

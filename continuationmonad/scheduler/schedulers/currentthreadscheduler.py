@@ -72,8 +72,10 @@ class CurrentThreadScheduler(Scheduler):
                     self.immediate_tasks.append(entry)
 
                 else:
-                    timedelta = datetime.datetime.now() - entry.duetime
-                    self.condition.wait(timedelta.total_seconds())
+                    timedelta = (entry.duetime - datetime.datetime.now()).total_seconds()
+                    if 0 < timedelta:
+                        with self.condition:
+                            self.condition.wait(timedelta)
 
             else:
                 with self.lock:

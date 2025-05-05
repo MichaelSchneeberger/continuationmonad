@@ -118,13 +118,13 @@ def schedule_on(scheduler: InstantScheduler):
 
 def schedule_relative(scheduler: Scheduler, duetime: float):
     return init_continuation_monad(
-        init_schedule_relative(duetime=duetime, scheduler=scheduler)
+        init_schedule_relative(scheduler=scheduler, duetime=duetime)
     )
 
 
 def schedule_absolute(scheduler: Scheduler, duetime: datetime.datetime):
     return init_continuation_monad(
-        init_schedule_absolute(duetime=duetime, scheduler=scheduler)
+        init_schedule_absolute(scheduler=scheduler, duetime=duetime)
     )
 
 
