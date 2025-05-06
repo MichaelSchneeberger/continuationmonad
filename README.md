@@ -1,15 +1,15 @@
 # Continuation-Monad
 
-A Python library implementing stack-safe continuations based on schedulers, ensuring deadlock-free asynchronous computations.
-<!-- that encapsulates callback functions within a continuation monad, utilizing a trampoline scheduler to enable stack-safe computations. -->
+**Continuation-Monad** is a Python library for stack-safe, asynchronous computation using continuation-passing style.  
+It wraps callbacks in a continuation monad and leverages trampoline-based schedulers to guarantee deadlock-free execution without growing the call stack.
 
 
 ## Features
 
-* **Trampoline-based**: Stack-safe execution of the continuation monad through trampolining
-* **Continuation certificate**: Ensures the execution of a Flowable completes, albeit with some computational overhead.
-* **Scheduler-based**: Explicit control over execution context through different scheduler implementations
-* **Composable operations**: Monadic operators for clean functional pipelines
+- **Trampoline-based execution**: Ensures stack-safety by evaluating recursive computations iteratively.
+- **Continuation certificates**: Ensures the execution of a continuation monad completes, avoiding any continuation deadlock.
+- **Flexible schedulers**: Explicitly control execution context via multiple scheduler types.
+- **Composable monadic operations**: Enables clean, functional-style pipelines with `map`, `flat_map`, and more.
 
 
 ## Installation
@@ -23,6 +23,8 @@ pip install continuationmonad
 
 ## Example
 
+The example below recursively counts down from 5 to 0, using a trampoline to avoid stack overflow:
+
 ``` python
 import continuationmonad
 
@@ -34,82 +36,76 @@ def count_down(count: int):
         return continuationmonad.from_(count)
     
     else:
-        # schedule recursive call on the trampoline
         return continuationmonad.tail_rec(lambda: count_down(count - 1))
 
-# runs continuation and returns 0
+# Runs the continuation and returns 0
 result = continuationmonad.run(
     count_down(5)
 )
 ```
 
+
 ## Schedulers and Trampolines
 
-The library provides the following scheduler implementations
+The library includes several schedulers to manage execution contexts:
 
-- `init_main_scheduler`: Initializes a scheduler that runs in the main thread.
-  It starts execution via the `run()` method, which blocks until `stop()` is called to terminate the scheduler.
-- `init_event_loop_scheduler`: Creates a scheduler that operates on a dedicated background thread.
-  This is useful for offloading tasks from the main thread or isolating execution contexts.
+- **Main Scheduler**:  
+    Runs on the main thread. Blocks on run() until stop() is called.
+    ``` python
+    scheduler = continuationmonad.init_main_scheduler()
+    ```
+- **Event Loop Scheduler**:  
+    Runs on a dedicated background thread, useful for concurrent or offloaded work.
     ``` python
     scheduler = continuationmonad.init_event_loop_scheduler()
     ```
-- `init_trampoline`: Returns a lightweight scheduler that only implements the `schedule()` method.
-  It does not support delayed execution methods like `schedule_relative()` or `schedule_absolute()`.
-  This scheduler runs tasks immediately in a loop until its queue is exhausted.
+- **Trampoline**:  
+    Lightweight and synchronous. Implements only schedule() and executes tasks immediately in a loop until the queue is empty.
+    ``` python
+    scheduler = continuationmonad.init_trampoline()
+    ```
+
 
 ## Operations
 
 ### Creating Continuation Monads
 
-- `defer` - creates a continuation monad that defers the subscription until a source is connected (see [defer example](examples/deferexample.py))
-- `from_`: Create a continuation monad from a value:
+- `defer` - Creates a deferred continuation, activated upon subscription.  
+    (See [defer example](examples/basic/deferexample.py))
+- `from_`: Wraps a value in a continuation monad:
     ``` python
     c = continuationmonad.from_(5)
     ```
-- `get_trampoline` - retrieve trampoline associated with the continuation monad
+- `get_trampoline` - Retrieves the default trampoline scheduler:
     ``` python
     c = continuationmonad.get_trampoline()
     ```
-- `schedule_on` - schedule elements emitted by the source on a dedicated scheduler
+- `schedule_on` - Schedules continuation execution on the given scheduler:
     ``` python
     c = continuationmonad.schedule_on(scheduler)
     ```
-- `schedule_trampoline` - schedule item on trampoline
+- `schedule_trampoline` - Schedules execution on the trampoline:
     ``` python
     c = continuationmonad.schedule_trampoline()
     ```
-- `tail_rec` - recursively call a function on trampoline
+- `tail_rec` - Performs recursive calls in a stack-safe manner using the trampoline.
 
 
 ### Transforming operators
 
-- `connect` - connects the continuation monad to deferred one or multiple subscribers (see [defer example](examples/deferexample.py))
-- `flat_map` - apply a function to the item emitted by the source and flattens the result
-- `map` - map the item emitted by the source by applying the given function
+- `connect` - Connects the continuation to one or more subscribers.  
+    (See [defer example](examples/basic/deferexample.py))
+- `flat_map` - Applies a function that returns a continuation and flattens the result.
+- `map` - Transforms the emitted item using the provided function.
 
 ### Combining operators
 
-- `zip` - create a new continuation monad from two (or more) continuation monads by combining their items in a tuple
-    ``` python
-    c = continuationmonad.zip((
-        continuationmonad.from_(1),
-        continuationmonad.from_(2),
-    ))
-    ```
+- `zip` - Combines items from multiple continuations into a tuple.
+    (See [zip example](examples/basic/zipexample.py))
 
-### Other operators
 
-- `fork` - runs the continuation monad on a specified trampoline (see [defer example](examples/deferexample.py))
-    ``` python
-    c = continuationmonad.fork(
-        source=source,
-        scheduler=scheduler,
-        weight=1,               # specify continuation weight
-    )
-    ```
-- `run` - runs the continuation monad on a new trampoline and returns its result
-    ``` python
-    # execute a continuation monad
-    result = continuationmonad.run(source)
-    ```
+### Output functions
+
+- `fork` - Runs the continuation on a separate trampoline.
+    (See [defer example](examples/basic/deferexample.py))
+- `run` - Executes the continuation on a new trampoline and returns its result.
