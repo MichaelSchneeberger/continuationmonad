@@ -130,9 +130,6 @@ def schedule_absolute(scheduler: Scheduler, duetime: datetime.datetime):
 
 def schedule_trampoline():
     return get_trampoline()
-    # return get_trampoline().flat_map(
-    #     lambda trampoline: schedule_on(scheduler=trampoline)
-    # )
 
 
 def tail_rec(func: Callable[[], ContinuationMonad]):
