@@ -128,6 +128,28 @@ def schedule_absolute(scheduler: Scheduler, duetime: datetime.datetime):
     )
 
 
+def sleep(
+    scheduler: Scheduler,
+    seconds: float | None = None,
+    until: datetime.datetime | None = None,
+):
+    match seconds, until:
+        case None, None:
+            raise Exception(
+                "Either `seconds` or `until` argument needs to be provided."
+            )
+
+        case None, _:
+            return init_continuation_monad(
+                init_schedule_absolute(duetime=until, scheduler=scheduler),
+            )
+
+        case _:
+            return init_continuation_monad(
+                init_schedule_relative(duetime=seconds, scheduler=scheduler)
+            )
+
+
 def schedule_trampoline():
     return get_trampoline()
 

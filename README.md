@@ -84,9 +84,13 @@ The library includes several schedulers to manage execution contexts:
     ``` python
     c = continuationmonad.schedule_on(scheduler)
     ```
-- `schedule_trampoline` - Schedules execution on the trampoline:
+- `schedule_trampoline` - Schedules execution on the active trampoline:
     ``` python
     c = continuationmonad.schedule_trampoline()
+    ```
+- `delay` - Schedules continuation execution on the given scheduler after a relative time:
+    ``` python
+    c = continuationmonad.delay(scheduler, 1)
     ```
 - `tail_rec` - Performs recursive calls in a stack-safe manner using the trampoline.
 
