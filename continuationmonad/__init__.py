@@ -21,7 +21,6 @@ from continuationmonad.continuationmonad.from_ import (
     from_ as _from_value,
     zip as _zip,
     schedule_on as _schedule_on,
-    sleep as _sleep,
     schedule_relative as _schedule_relative,
     schedule_absolute as _schedule_absolute,
     schedule_trampoline as _schedule_trampoline,
@@ -56,8 +55,8 @@ from_ = _from_value
 get_trampoline = _get_trampoline
 schedule_trampoline = _schedule_trampoline
 schedule_on = _schedule_on
-sleep = _sleep
-delay = _sleep
+sleep = _schedule_relative
+delay = _schedule_relative
 schedule_relative = _schedule_relative  # depricated
 schedule_absolute = _schedule_absolute  # depricated
 tail_rec = _tail_rec

@@ -116,38 +116,16 @@ def schedule_on(scheduler: InstantScheduler):
     return init_continuation_monad(init_schedule_on(scheduler=scheduler))
 
 
-def schedule_relative(scheduler: Scheduler, duetime: float):
+def schedule_relative(duetime: float, scheduler: Scheduler):
     return init_continuation_monad(
         init_schedule_relative(scheduler=scheduler, duetime=duetime)
     )
 
 
-def schedule_absolute(scheduler: Scheduler, duetime: datetime.datetime):
+def schedule_absolute(duetime: datetime.datetime, scheduler: Scheduler):
     return init_continuation_monad(
         init_schedule_absolute(scheduler=scheduler, duetime=duetime)
     )
-
-
-def sleep(
-    scheduler: Scheduler,
-    seconds: float | None = None,
-    until: datetime.datetime | None = None,
-):
-    match seconds, until:
-        case None, None:
-            raise Exception(
-                "Either `seconds` or `until` argument needs to be provided."
-            )
-
-        case None, _:
-            return init_continuation_monad(
-                init_schedule_absolute(duetime=until, scheduler=scheduler),
-            )
-
-        case _:
-            return init_continuation_monad(
-                init_schedule_relative(duetime=seconds, scheduler=scheduler)
-            )
 
 
 def schedule_trampoline():
