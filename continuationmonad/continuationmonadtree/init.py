@@ -47,7 +47,7 @@ def init_connect(child, handlers):
     )
 
 
-@dataclassabc(frozen=True)
+@dataclassabc(frozen=True, repr=False)
 class DeferImpl[_](Defer):  # hide Impl classes in init.pyi for type hinting
     func: Callable[[Trampoline, DeferredHandler], ContinuationCertificate]
     stack: tuple[FrameSummary, ...]
@@ -63,7 +63,7 @@ def init_defer(
     )
 
 
-@dataclassabc(frozen=True)
+@dataclassabc(frozen=True, repr=False)
 class FlatMapImpl[_, __](FlatMap):
     child: ContinuationMonadNode
     func: Callable[[None], ContinuationMonadNode]
@@ -75,6 +75,8 @@ def init_flat_map(
     func: Callable[[None], ContinuationMonadNode],
     stack: tuple[FrameSummary, ...],
 ):
+    assert isinstance(child, ContinuationMonadNode), f'{child} is not a ContinuationMonadNode.'
+
     return FlatMapImpl(
         child=child,
         func=func,
@@ -106,13 +108,13 @@ def init_zip(children: Iterable[ContinuationMonadNode]):
             )
 
         case 1:
-            return children
+            return init_map(child=children[0], func=lambda v: (v,), stack=tuple())
 
         case _:
             return ZipImpl(children=children)
 
 
-@dataclassabc(frozen=True)
+@dataclassabc(frozen=True, repr=False)
 class MapImpl[_, __](Map):
     child: ContinuationMonadNode
     func: Callable

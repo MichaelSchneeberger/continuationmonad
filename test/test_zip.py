@@ -36,7 +36,7 @@ class TestZip(TestCase):
         
         @do()
         def gen_source1():
-            yield schedule_relative(self.scheduler, 1)
+            yield schedule_relative(1, self.scheduler)
             return from_(1)
         
         @do()
