@@ -4,9 +4,10 @@ from typing import Callable, Deque, override
 import datetime
 import heapq
 
-from continuationmonad.scheduler.mainschedulermixin import MainScheduler
-from continuationmonad.scheduler.scheduledtask import DelayedScheduledTask, ScheduledTask
+from continuationmonad.scheduler.sequentialscheduler import SequentialScheduler
 from continuationmonad.utils.framesummary import get_frame_summary
+from continuationmonad.scheduler.mainschedulermixin import MainSchedulerMixin
+from continuationmonad.scheduler.scheduledtask import DelayedScheduledTask, ScheduledTask
 from continuationmonad.scheduler.cancellation import Cancellation
 from continuationmonad.scheduler.continuationcertificate import (
     ContinuationCertificate,
@@ -14,7 +15,7 @@ from continuationmonad.scheduler.continuationcertificate import (
 from continuationmonad.scheduler.scheduler import Scheduler
 
 
-class EventLoopScheduler(Scheduler):
+class EventLoopScheduler(SequentialScheduler, Scheduler):
     @property
     @abstractmethod
     def immediate_tasks(
@@ -41,15 +42,15 @@ class EventLoopScheduler(Scheduler):
 
     @property
     @abstractmethod
-    def is_stopped(self) -> bool: ...
+    def _is_stopped(self) -> bool: ...
 
-    @is_stopped.setter
+    @_is_stopped.setter
     @abstractmethod
-    def is_stopped(self, val: bool): ...
+    def _is_stopped(self, val: bool): ...
 
     def start_loop(self):
         while True:
-            if self.is_stopped:
+            if self._is_stopped:
                 break
 
             elif self.immediate_tasks:
@@ -58,7 +59,7 @@ class EventLoopScheduler(Scheduler):
                 self._execute_task(
                     task=entry.task,
                     weight=entry.weight,
-                    stack=entry.stack,
+                    # stack=entry.stack,
                     cancellation=entry.cancellation,
                 )
 
@@ -83,7 +84,7 @@ class EventLoopScheduler(Scheduler):
 
             else:
                 with self.condition:
-                    if self.immediate_tasks or self.delayed_tasks or self.is_stopped:
+                    if self.immediate_tasks or self.delayed_tasks or self._is_stopped:
                         pass
                     
                     else:
@@ -98,7 +99,7 @@ class EventLoopScheduler(Scheduler):
         self,
         task: Callable[[], ContinuationCertificate],
         weight: int,
-        cancellation: Cancellation | None = None,
+        cancellation: Cancellation | None,
     ):
         # stack = get_frame_summary()
 
@@ -129,7 +130,7 @@ class EventLoopScheduler(Scheduler):
         duetime: float,
         task: Callable[[], ContinuationCertificate],
         weight: int,
-        cancellation: Cancellation | None = None,
+        cancellation: Cancellation | None,
     ):
         duetime_datetime = datetime.datetime.now() + datetime.timedelta(seconds=duetime)
 
@@ -146,7 +147,7 @@ class EventLoopScheduler(Scheduler):
         duetime: datetime.datetime,
         task: Callable[[], ContinuationCertificate],
         weight: int,
-        cancellation: Cancellation | None = None,
+        cancellation: Cancellation | None,
     ):
         entry = DelayedScheduledTask(
             duetime=duetime,
@@ -168,27 +169,33 @@ class EventLoopScheduler(Scheduler):
         )
 
 
-class MainScheduler(MainScheduler, EventLoopScheduler):
-    def stop(self):
+class MainScheduler(MainSchedulerMixin, EventLoopScheduler):
+    @override
+    def stop(self, weight: int):
         """
         The stop function is capable of creating the finishing Continuation
         """
 
         with self.lock:
-            if self.is_stopped:
+            if self._is_stopped:
                 raise Exception("Scheduler can only be stopped once.")
-            self.is_stopped = True
+            self._is_stopped = True
 
             self.condition.notify()
 
-        return self._create_certificate(weight=1, stack=get_frame_summary())
+        return super().stop(weight)
 
+    @override
     def run(
         self,
         task: Callable[[], ContinuationCertificate],
+        weight: int,
         cancellation: Cancellation | None = None,
     ) -> None:
+        super().run(task=task, weight=weight, cancellation=cancellation)
+        # with self.lock:
+        #     self._weight = weight
         
-        self.schedule(task=task, weight=1, cancellation=cancellation)
+        # self.schedule(task=task, weight=weight, cancellation=cancellation)
 
         self.start_loop()

@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import override
 
 from continuationmonad.scheduler.continuationcertificate import (
     ContinuationCertificate,
@@ -23,12 +24,18 @@ class ContinuationMonadLeave[U](ContinuationMonadNode[U]):
         args: SubscribeArgs[U],
     ) -> ContinuationCertificate: ...
 
+    @override
     def subscribe(
         self,
         args: SubscribeArgs[U],
-    ) -> ContinuationCertificate:
+    ):
         def trampoline_task():
-            return self._subscribe(args=args)
+            certificate = self._subscribe(args=args)
+
+            # if not isinstance(certificate, ContinuationCertificate):
+            #     raise AssertionError(f'{self=}.subscribe returned {certificate}.')
+
+            return certificate
 
         return args.trampoline.schedule(
             task=trampoline_task,

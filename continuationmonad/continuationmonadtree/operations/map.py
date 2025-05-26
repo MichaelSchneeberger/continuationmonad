@@ -1,6 +1,6 @@
 from abc import abstractmethod
 import traceback
-from typing import Callable
+from typing import Callable, override
 
 from dataclassabc import dataclassabc
 
@@ -24,7 +24,8 @@ class MapObserver[U, V](FrameSummaryMixin, Observer[U]):
     stack: tuple[FrameSummary, ...]
     raise_immediately: bool
 
-    def on_success(self, trampoline: Trampoline, item: U):
+    @override
+    def on_success(self, trampoline: Trampoline, weight: int, item: U):
         try:
             mapped_item = self.func(item)
 
@@ -40,7 +41,7 @@ class MapObserver[U, V](FrameSummaryMixin, Observer[U]):
                     )
                 )
             )
-            return self.observer.on_error(trampoline, exception)
+            return self.observer.on_error(trampoline, weight, exception)
 
         except Exception:
             if self.raise_immediately:
@@ -56,12 +57,13 @@ class MapObserver[U, V](FrameSummaryMixin, Observer[U]):
                     )
                 )
             )
-            return self.observer.on_error(trampoline, exception)
+            return self.observer.on_error(trampoline, weight, exception)
 
-        return self.observer.on_success(trampoline, mapped_item)
+        return self.observer.on_success(trampoline, weight, mapped_item)
 
-    def on_error(self, trampoline: Trampoline, exception: Exception):
-        return self.observer.on_error(trampoline, exception)
+    @override
+    def on_error(self, trampoline: Trampoline, weight: int, exception: Exception):
+        return self.observer.on_error(trampoline, weight, exception)
 
 
 class Map[U, V](FrameSummaryMixin, SingleChildContinuationMonadNode[U, V]):
@@ -72,11 +74,11 @@ class Map[U, V](FrameSummaryMixin, SingleChildContinuationMonadNode[U, V]):
     @abstractmethod
     def func(self) -> Callable[[U], V]: ...
 
+    @override
     def subscribe(
         self,
         args: SubscribeArgs,
     ):
-
         return self.child.subscribe(
             args=args.copy(observer=MapObserver(
                 observer=args.observer,

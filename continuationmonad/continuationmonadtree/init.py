@@ -2,6 +2,8 @@ import datetime
 from typing import Callable, Iterable
 from dataclassabc import dataclassabc
 
+from continuationmonad.continuationmonadtree.sources.decreaseweight import DecreaseWeight
+from continuationmonad.continuationmonadtree.sources.increaseweight import IncreaseWeight
 from continuationmonad.continuationmonadtree.sources.scheduleabsolute import ScheduleAbsolute
 from continuationmonad.continuationmonadtree.sources.schedulerelative import (
     ScheduleRelative,
@@ -63,6 +65,17 @@ def init_defer(
     )
 
 
+@dataclassabc(frozen=True)
+class DecreaseWeightImpl(DecreaseWeight):
+    certificates: tuple[ContinuationCertificate, ...]
+
+
+def init_decrease_weight(
+    certificates: tuple[ContinuationCertificate, ...],
+):
+    return DecreaseWeightImpl(certificates=certificates)
+
+
 @dataclassabc(frozen=True, repr=False)
 class FlatMapImpl[_, __](FlatMap):
     child: ContinuationMonadNode
@@ -75,8 +88,6 @@ def init_flat_map(
     func: Callable[[None], ContinuationMonadNode],
     stack: tuple[FrameSummary, ...],
 ):
-    assert isinstance(child, ContinuationMonadNode), f'{child} is not a ContinuationMonadNode.'
-
     return FlatMapImpl(
         child=child,
         func=func,
@@ -94,24 +105,14 @@ def init_get_trampoline():
 
 
 @dataclassabc(frozen=True)
-class ZipImpl[_](Zip):
-    children: tuple[ContinuationMonadNode, ...]
+class IncreaseWeightImpl(IncreaseWeight):
+    increase: int
 
 
-def init_zip(children: Iterable[ContinuationMonadNode]):
-    children = tuple(children)
-
-    match len(children):
-        case 0:
-            raise AssertionError(
-                "No continuation monads provided. Cannot create a continuation monad."
-            )
-
-        case 1:
-            return init_map(child=children[0], func=lambda v: (v,), stack=tuple())
-
-        case _:
-            return ZipImpl(children=children)
+def init_increase_weight(
+    increase: int,
+):
+    return IncreaseWeightImpl(increase=increase)
 
 
 @dataclassabc(frozen=True, repr=False)
@@ -190,3 +191,24 @@ def init_schedule_absolute(
         duetime=duetime,
     )
 
+@dataclassabc(frozen=True)
+class ZipImpl[_](Zip):
+    children: tuple[ContinuationMonadNode, ...]
+
+
+def init_zip(children: Iterable[ContinuationMonadNode]):
+    children = tuple(children)
+
+    match len(children):
+        case 0:
+            raise AssertionError(
+                "No continuation monads provided. Cannot create a continuation monad."
+            )
+
+        case 1:
+            return init_map(child=children[0], func=lambda v: (v,), stack=tuple())
+
+        case _:
+            assert all(isinstance(c, ContinuationMonadNode) for c in children), f'{children=} are not ContinuationMonadNode'
+
+            return ZipImpl(children=children)

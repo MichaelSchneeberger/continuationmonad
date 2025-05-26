@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from threading import Lock, RLock
+from typing import override
 
 from continuationmonad.scheduler.continuationcertificate import ContinuationCertificate
 from continuationmonad.scheduler.schedulers.trampoline import Trampoline
@@ -150,7 +151,8 @@ class ZipObserver[U](Observer[U]):
     id: int
     shared: SharedZipMemory
 
-    def on_success(self, trampoline: Trampoline, item: U) -> ContinuationCertificate:
+    @override
+    def on_success(self, trampoline: Trampoline, weight: int, item: U):
         transition = OnNextTransition(
             id=self.id,
             child=None,  # type: ignore
@@ -164,7 +166,7 @@ class ZipObserver[U](Observer[U]):
         match state := transition.get_state():
             case OnSuccessState(values=values):
                 _, zipped_values = zip(*sorted(values.items()))
-                return self.shared.observer.on_success(trampoline, zipped_values)
+                return self.shared.observer.on_success(trampoline, weight, zipped_values)
 
             case AwaitFurtherState(certificate=certificate):
                 return certificate
@@ -175,7 +177,8 @@ class ZipObserver[U](Observer[U]):
             case _:
                 raise Exception(f"Unexpected state {state}")
 
-    def on_error(self, trampoline: Trampoline, exception: Exception) -> ContinuationCertificate:
+    @override
+    def on_error(self, trampoline: Trampoline, weight: int, exception: Exception):
         transition = OnErrorTransition(
             id=self.id,
             child=None,  # type: ignore
@@ -187,7 +190,7 @@ class ZipObserver[U](Observer[U]):
 
         match state := transition.get_state():
             case OnErrorState():
-                return self.shared.observer.on_error(trampoline, exception)
+                return self.shared.observer.on_error(trampoline, weight, exception)
             
             case TerminatedStateMixin(certificate=certificate):
                 return certificate
@@ -200,6 +203,7 @@ class Zip[U](MultiChildrenContinuationMonadNode[U, tuple[U, ...]]):
     def __str__(self) -> str:
         return f"zip({self.children})"
 
+    @override
     def subscribe(
         self,
         args: SubscribeArgs,

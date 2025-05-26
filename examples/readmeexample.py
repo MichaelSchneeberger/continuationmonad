@@ -2,17 +2,17 @@ import continuationmonad
 
 
 def count_down(count: int):
-    print(f"{count=}")
+    print(f'{count=}')
 
     if count == 0:
         return continuationmonad.from_(count)
-
+    
     else:
-        # schedule recursive call on the trampoline
-        return continuationmonad.tail_rec(lambda: count_down(count - 1))
+        return continuationmonad.schedule_trampoline().flat_map(
+            lambda _: count_down(count - 1)
+        )
 
+# Runs the continuation and returns 0
 result = continuationmonad.run(
     count_down(5)
 )
-
-print(f'{result=}')

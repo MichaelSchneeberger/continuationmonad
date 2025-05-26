@@ -29,6 +29,6 @@ class InstantScheduler:
         self,
         task: Callable[[], ContinuationCertificate],
         weight: int,
-        stack: tuple[FrameSummary, ...],
+        # stack: tuple[FrameSummary, ...],
         cancellation: Cancellation | None,
     ) -> None: ...

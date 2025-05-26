@@ -5,13 +5,14 @@ from typing import Callable, Deque, override
 import datetime
 
 from continuationmonad.scheduler.scheduledtask import DelayedScheduledTask, ScheduledTask
+from continuationmonad.scheduler.sequentialscheduler import SequentialScheduler
 from continuationmonad.utils.framesummary import get_frame_summary
 from continuationmonad.scheduler.cancellation import Cancellation
 from continuationmonad.scheduler.continuationcertificate import ContinuationCertificate
 from continuationmonad.scheduler.scheduler import Scheduler
 
 
-class CurrentThreadScheduler(Scheduler):
+class CurrentThreadScheduler(SequentialScheduler, Scheduler):
     @property
     @abstractmethod
     def immediate_tasks(
@@ -52,7 +53,7 @@ class CurrentThreadScheduler(Scheduler):
                 self._execute_task(
                     task=entry.task,
                     weight=entry.weight,
-                    stack=entry.stack,
+                    # stack=entry.stack,
                     cancellation=entry.cancellation,
                 )
 
@@ -95,7 +96,7 @@ class CurrentThreadScheduler(Scheduler):
         self,
         task: Callable[[], ContinuationCertificate],
         weight: int,
-        cancellation: Cancellation | None = None,
+        cancellation: Cancellation | None,
     ):
         # stack = get_frame_summary()
 
@@ -130,7 +131,7 @@ class CurrentThreadScheduler(Scheduler):
         duetime: float,
         task: Callable[[], ContinuationCertificate],
         weight: int,
-        cancellation: Cancellation | None = None,
+        cancellation: Cancellation | None,
     ):
         duetime_datetime = datetime.datetime.now() + datetime.timedelta(seconds=duetime)
 
@@ -147,7 +148,7 @@ class CurrentThreadScheduler(Scheduler):
         duetime: datetime.datetime,
         task: Callable[[], ContinuationCertificate],
         weight: int,
-        cancellation: Cancellation | None = None,
+        cancellation: Cancellation | None,
     ):
         entry = DelayedScheduledTask(
             duetime=duetime,

@@ -11,5 +11,5 @@ class DeferredHandler[U]:
     weight: int
     cancellation: Cancellation | None
 
-    def resume(self, trampoline: Trampoline, value: U):
-        return self.observer.on_success(trampoline, value)
+    def resume(self, trampoline: Trampoline, weight: int, value: U):
+        return self.observer.on_success(trampoline, weight, value)

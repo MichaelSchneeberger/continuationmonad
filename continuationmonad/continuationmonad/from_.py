@@ -6,7 +6,9 @@ from continuationmonad.continuationmonad.init import init_continuation_monad
 
 from continuationmonad.continuationmonadtree.deferredhandler import DeferredHandler
 from continuationmonad.continuationmonadtree.init import (
+    init_decrease_weight,
     init_error,
+    init_increase_weight,
     init_schedule_absolute,
     init_schedule_relative,
     init_zip,
@@ -27,7 +29,10 @@ from continuationmonad.utils.framesummary import get_frame_summary
 class defer[U]:
     def __new__(
         _,
-        func: Callable[[Trampoline, DeferredHandler[U]], ContinuationCertificate],
+        func: Callable[
+            [Trampoline, DeferredHandler[U]],
+            ContinuationCertificate | ContinuationMonad[ContinuationCertificate],
+        ],
     ):
         """
         Create a continuation monad that defers the subscription until a source is connected.
@@ -75,6 +80,49 @@ class defer[U]:
         return init_continuation_monad(init_defer(func=func, stack=get_frame_summary()))
 
 
+def decrease_weight(certificates: tuple[ContinuationCertificate, ...]):
+    return init_continuation_monad(init_decrease_weight(certificates=certificates))
+
+
+def error(exception: Exception):
+    return init_continuation_monad(init_error(exception=exception))
+
+
+def from_[U](value: U):
+    return init_continuation_monad(init_from_value(value=value))
+
+
+def get_trampoline():
+    return init_continuation_monad(init_get_trampoline())
+
+
+def increase_weight(increase: int):
+    return init_continuation_monad(init_increase_weight(increase=increase))
+
+
+def schedule_on(scheduler: InstantScheduler):
+    return init_continuation_monad(init_schedule_on(scheduler=scheduler))
+
+
+def schedule_relative(seconds: float, scheduler: Scheduler):
+    return init_continuation_monad(
+        init_schedule_relative(scheduler=scheduler, duetime=seconds)
+    )
+
+
+def schedule_absolute(duetime: datetime.datetime, scheduler: Scheduler):
+    return init_continuation_monad(
+        init_schedule_absolute(scheduler=scheduler, duetime=duetime)
+    )
+
+
+def schedule_trampoline():
+    return get_trampoline()
+
+
+def tail_rec(func: Callable[[], ContinuationMonad]):
+    return schedule_trampoline().flat_map(lambda _: func())
+
 def zip[U](
     sources: Iterable[ContinuationMonad[U]],
 ):
@@ -98,39 +146,3 @@ def zip[U](
     """
 
     return init_continuation_monad(init_zip(children=tuple(sources)))
-
-
-def error(exception: Exception):
-    return init_continuation_monad(init_error(exception=exception))
-
-
-def from_[U](value: U):
-    return init_continuation_monad(init_from_value(value=value))
-
-
-def get_trampoline():
-    return init_continuation_monad(init_get_trampoline())
-
-
-def schedule_on(scheduler: InstantScheduler):
-    return init_continuation_monad(init_schedule_on(scheduler=scheduler))
-
-
-def schedule_relative(duetime: float, scheduler: Scheduler):
-    return init_continuation_monad(
-        init_schedule_relative(scheduler=scheduler, duetime=duetime)
-    )
-
-
-def schedule_absolute(duetime: datetime.datetime, scheduler: Scheduler):
-    return init_continuation_monad(
-        init_schedule_absolute(scheduler=scheduler, duetime=duetime)
-    )
-
-
-def schedule_trampoline():
-    return get_trampoline()
-
-
-def tail_rec(func: Callable[[], ContinuationMonad]):
-    return schedule_trampoline().flat_map(lambda _: func())

@@ -8,7 +8,7 @@ from continuationmonad.scheduler.instantscheduler import (
     InstantScheduler as _InstantScheduler,
 )
 from continuationmonad.scheduler.mainschedulermixin import (
-    MainScheduler as _MainScheduler,
+    MainSchedulerMixin as _MainScheduler,
 )
 from continuationmonad.scheduler.schedulers.currentthreadscheduler import (
     CurrentThreadScheduler as _CurrentThreadScheduler,
@@ -28,6 +28,10 @@ from continuationmonad.continuationmonadtree.subscribeargs import (
 from continuationmonad.continuationmonad.continuationmonad import (
     ContinuationMonad as _ContinuationMonad,
 )
+from continuationmonad.scheduler.schedulers.virtualtimescheduler import (
+    MainVirtualTimeScheduler as _MainVirtualTimeScheduler,
+    VirtualTimeScheduler as _VirtualTimeScheduler,
+)
 
 
 Cancellation = _Cancellation
@@ -37,6 +41,8 @@ Scheduler = _Scheduler
 Trampoline = _Trampoline
 MainScheduler = _MainScheduler
 CurrentThreadScheduler = _CurrentThreadScheduler
+VirtualTimeScheduler = _VirtualTimeScheduler
+MainVirtualTimeScheduler = _MainVirtualTimeScheduler
 
 Observer = _Observer
 DeferredHandler = _DeferredHandler

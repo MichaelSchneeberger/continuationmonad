@@ -1,103 +1,199 @@
 from __future__ import annotations
+from abc import abstractmethod
+from dataclasses import replace
+from functools import cached_property
 from threading import Lock
+from typing import override
+
+from dataclassabc import dataclassabc
 
 from continuationmonad.exceptions import ContinuationMonadOperatorException
-from continuationmonad.utils.framesummary import FrameSummaryMixin, FrameSummary, get_frame_summary
+from continuationmonad.utils.framesummary import (
+    FrameSummaryMixin,
+    FrameSummary,
+    get_frame_summary,
+)
 
 
-class ContinuationCertificate(FrameSummaryMixin):
-    __permission__ = False
-
-    def __init__(self, lock: Lock, weight: int, stack: tuple[FrameSummary, ...]):
-        assert self.__permission__, (
-            "A certificate should uniquely be created by a scheduler implementation."
-        )
-
-        # a certificate can be verified exactly once
-        self.__verified__ = False
-
-        self._lock = lock
-        self._weight = weight
-        self._stack = stack
-
-    @property
-    def lock(self):
-        return self._lock
-
-    @property
-    def weight(self):
-        return self._weight
-
+class ContinuationCertificateMixin(FrameSummaryMixin):
     def __repr__(self):
-        return f"{self.__class__.__name__}(weight={self._weight}, verified={self.__verified__})"
+        return f"{self.__class__.__name__}(weight={self.weight}, velidated={self.validated})"
 
-    def verify(self, weight: int):
-        """
-        A continuation can be verified exactly once.
-        """
+    @property
+    @abstractmethod
+    def weight(self) -> int: ...
 
-        if weight != self._weight:
-            traceback_msg = self.to_operator_traceback(stack=self._stack)
-            raise ContinuationMonadOperatorException(
-                f"The provided weight {weight} does not match the certificate weight {self._weight}."
-                f"\n{traceback_msg}"
-            )
+    @property
+    @abstractmethod
+    def validated(self) -> bool: ...
 
-        with self._lock:
-            # assert not self.__verified__, 'A continuation can only be verified once.'
-            p_verified = self.__verified__
-            self.__verified__ = True
+    @property
+    @abstractmethod
+    def lock(self) -> Lock: ...
 
-        if p_verified:
-            traceback_msg = self.to_operator_traceback(stack=self._stack)
-            raise ContinuationMonadOperatorException(
-                "The certificate has already been verified."
-                f"\n{traceback_msg}"
-            )
+    @abstractmethod
+    def validate(self, weight: int): ...
 
-    def split(self, partition: tuple[int, ...], stack: tuple[FrameSummary, ...] | None = None):
-        assert sum(partition) == self._weight
+    def or_(self, other: ContinuationCertificate):
+        if not self.validated:
+            return self
+        else:
+            return other
+
+    def split(
+        self, 
+        partition: tuple[int, ...], 
+        stack: tuple[FrameSummary, ...] | None = None
+    ):
+        assert sum(partition) == self.weight
 
         if stack is None:
             stack = get_frame_summary()
 
-        self.verify(self.weight)
+        self.validate(self.weight)
 
         def gen_certificates():
             for weight in partition:
-                yield self.__class__(lock=self._lock, weight=weight, stack=stack)
+                yield ContinuationCertificate(
+                    lock=self.lock,
+                    weight=weight,
+                    stack=stack,
+                    validated=False,
+                )
 
         return tuple(gen_certificates())
 
-    def take(self, weight: int):
-        if self._weight < weight:
-            traceback_msg = self.to_operator_traceback(stack=self._stack)
+    def take(
+        self, 
+        weight: int, 
+        stack: tuple[FrameSummary, ...] | None = None,
+    ):
+        if stack is None:
+            stack = get_frame_summary()
+
+        if self.weight < weight:
+            traceback_msg = self.to_operator_traceback(stack=self.stack)
             raise ContinuationMonadOperatorException(
-                f"{weight} is larger than {self._weight}"
-                f"\n{traceback_msg}"
+                f"The Weight {weight} to take it larger than {self.weight}\n{traceback_msg}"
             )
 
         return self.split(
-            partition=(weight, self._weight - weight), 
-            stack=get_frame_summary(),
+            partition=(weight, self.weight - weight),
+            stack=stack,
         )
 
     @staticmethod
     def merge(
         certificates: tuple[ContinuationCertificate, ...],
+        stack: tuple[FrameSummary, ...] | None = None,
     ):
+        if stack is None:
+            stack = get_frame_summary()
+
         first, *_ = certificates
 
         def gen_weight():
             for certificate in certificates:
                 weight = certificate.weight
-                certificate.verify(weight)
+                certificate.validate(weight)
                 yield weight
 
         total_weight = sum(gen_weight())
 
-        return first.__class__(
-            lock=first._lock, 
-            weight=total_weight, 
-            stack=get_frame_summary(),
+        certificate = ContinuationCertificate(
+            lock=first.lock,
+            weight=total_weight,
+            stack=stack,
+            validated=False,
         )
+        return certificate
+
+
+@dataclassabc(repr=False)
+class ContinuationCertificate(ContinuationCertificateMixin):
+    lock: Lock
+    weight: int
+    stack: tuple[FrameSummary, ...]
+    validated: bool
+
+    # def copy(
+    #     self, /, 
+    #     weight: int | None = None,
+    #     stack: tuple[FrameSummary, ...] | None = None,
+    # ):
+    #     def gen_args():
+    #         if weight is not None:
+    #             yield 'weight', weight
+    #         if stack is not None:
+    #             yield 'stack', stack
+
+    #     return replace(self, **dict(gen_args()))
+
+    @override
+    def validate(self, weight: int):
+        """
+        A continuation can be verified exactly once.
+        """
+
+        if weight != self.weight:
+            traceback_msg = self.to_operator_traceback(stack=self.stack)
+            raise ContinuationMonadOperatorException(
+                f"The provided weight {weight} does not match the certificate weight {self.weight}."
+                f"\n{traceback_msg}"
+            )
+
+        with self.lock:
+            p_verified = self.validated
+            self.validated = True
+
+        if p_verified:
+            traceback_msg = self.to_operator_traceback(stack=self.stack)
+            raise ContinuationMonadOperatorException(
+                f"The certificate has already been verified.\n{traceback_msg}"
+            )
+
+
+@dataclassabc(repr=False)
+class CompositeContinuationCertificate(ContinuationCertificateMixin):
+    underlying: tuple[ContinuationCertificateMixin, ...]
+    stack: tuple[FrameSummary, ...]
+    lock: Lock
+
+    @cached_property
+    def weight(self):
+        def gen_weights():
+            for c in self.underlying:
+                yield c.weight
+        return sum(gen_weights())
+    
+    @cached_property
+    def validated(self):
+        def gen_validated():
+            for c in self.underlying:
+                yield c.validated
+        return any(gen_validated())
+
+    @override
+    def validate(self, weight: int):
+        if weight != self.weight:
+            traceback_msg = self.to_operator_traceback(stack=self.stack)
+            raise ContinuationMonadOperatorException(
+                f"The provided weight {weight} does not match the certificate weight {self.weight}."
+                f"\n{traceback_msg}"
+            )
+        
+        for c in self.underlying:
+            c.validate(c.weight)
+
+def init_composite_continuation_certificate(
+    underlying: tuple[ContinuationCertificateMixin, ...],
+    stack: tuple[FrameSummary, ...] | None = None,
+):
+    if stack is None:
+        stack = get_frame_summary()
+
+    return CompositeContinuationCertificate(
+        underlying=underlying,
+        stack=stack,
+        lock=underlying[0].lock,
+    )

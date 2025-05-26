@@ -1,6 +1,6 @@
 from abc import abstractmethod
 import traceback
-from typing import Callable
+from typing import Callable, override
 
 from dataclassabc import dataclassabc
 
@@ -31,7 +31,9 @@ class FlatMapObserver[U, V](FrameSummaryMixin, Observer[U]):
     cancellation: Cancellation | None
     raise_immediately: bool
 
-    def on_success(self, trampoline: Trampoline, item: U):
+    @override
+    def on_success(self, trampoline: Trampoline, weight: int, item: U):
+        # apply mapping function
         try:
             continuation = self.func(item)
 
@@ -47,7 +49,7 @@ class FlatMapObserver[U, V](FrameSummaryMixin, Observer[U]):
                     )
                 )
             )
-            return self.observer.on_error(trampoline, exception)
+            return self.observer.on_error(trampoline, weight, exception)
 
         except Exception:
             if self.raise_immediately:
@@ -63,14 +65,15 @@ class FlatMapObserver[U, V](FrameSummaryMixin, Observer[U]):
                     )
                 )
             )
-            return self.observer.on_error(trampoline, exception)
+            return self.observer.on_error(trampoline, weight, exception)
 
+        # subscribe inner continuation monad
         try:
             certificate = continuation.subscribe(
                 args=init_subscribe_args(
                     observer=self.observer,
                     trampoline=trampoline,
-                    weight=self.weight,
+                    weight=weight,
                     cancellation=self.cancellation,
                 )
             )
@@ -87,7 +90,7 @@ class FlatMapObserver[U, V](FrameSummaryMixin, Observer[U]):
                     )
                 )
             )
-            return self.observer.on_error(trampoline, exception)
+            return self.observer.on_error(trampoline, weight, exception)
 
         except Exception:
             if self.raise_immediately:
@@ -103,12 +106,13 @@ class FlatMapObserver[U, V](FrameSummaryMixin, Observer[U]):
                     )
                 )
             )
-            return self.observer.on_error(trampoline, exception)
+            return self.observer.on_error(trampoline, weight, exception)
 
         return certificate
 
-    def on_error(self, trampoline: Trampoline, exception: Exception):
-        return self.observer.on_error(trampoline, exception)
+    @override
+    def on_error(self, trampoline: Trampoline, weight: int, exception: Exception):
+        return self.observer.on_error(trampoline, weight, exception)
 
 
 class FlatMap[U, V](FrameSummaryMixin, SingleChildContinuationMonadNode[U, V]):
@@ -119,6 +123,7 @@ class FlatMap[U, V](FrameSummaryMixin, SingleChildContinuationMonadNode[U, V]):
     @abstractmethod
     def func(self) -> Callable[[U], ContinuationMonadNode[V]]: ...
 
+    @override
     def subscribe(
         self,
         args: SubscribeArgs,

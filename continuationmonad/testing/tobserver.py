@@ -2,28 +2,26 @@ from dataclasses import dataclass
 
 from continuationmonad.continuationmonadtree.observer import Observer
 from continuationmonad.scheduler.continuationcertificate import ContinuationCertificate
-from continuationmonad.scheduler.mainschedulermixin import MainScheduler
-from continuationmonad.scheduler.schedulers.trampoline import Trampoline
 
 
 @dataclass(frozen=False)
 class TObserver[U](Observer[U]):
     received_item: U | None
     received_exception: Exception | None
-    main_scheduler: MainScheduler
+    certificate: ContinuationCertificate
 
-    def on_success(self, trampoline: Trampoline, item: U) -> ContinuationCertificate:
+    def on_success(self, trampoline, weight, item: U):
         self.received_item = item
-        return self.main_scheduler.stop()
+        return self.certificate
 
-    def on_error(self, trampoline: Trampoline, exception: Exception) -> ContinuationCertificate:
+    def on_error(self, trampoline, weight, exception: Exception):
         self.received_exception = exception
-        return self.main_scheduler.stop()
+        return self.certificate
 
 
-def init_test_observer(main_scheduler: MainScheduler):
+def init_test_observer(): #main_scheduler: MainSchedulerMixin):
     return TObserver(
         received_item=None,
         received_exception=None,
-        main_scheduler=main_scheduler,
+        certificate=None, # type: ignore
     )

@@ -4,15 +4,16 @@ import heapq
 from threading import Lock
 from typing import Callable, Deque, override
 
+from continuationmonad.utils.framesummary import get_frame_summary
 from continuationmonad.scheduler.cancellation import Cancellation
 from continuationmonad.scheduler.continuationcertificate import ContinuationCertificate
-from continuationmonad.scheduler.mainschedulermixin import MainScheduler
+from continuationmonad.scheduler.mainschedulermixin import MainSchedulerMixin
 from continuationmonad.scheduler.scheduledtask import VirtualScheduledTask, ScheduledTask
 from continuationmonad.scheduler.scheduler import Scheduler
-from continuationmonad.utils.framesummary import get_frame_summary
+from continuationmonad.scheduler.sequentialscheduler import SequentialScheduler
 
 
-class VirtualTimeScheduler(Scheduler):
+class VirtualTimeScheduler(SequentialScheduler, Scheduler):
     @property
     @abstractmethod
     def immediate_tasks(
@@ -39,30 +40,30 @@ class VirtualTimeScheduler(Scheduler):
 
     @property
     @abstractmethod
-    def time(self) -> float: ...
+    def _time(self) -> float: ...
 
-    @time.setter
+    @_time.setter
     @abstractmethod
-    def time(self, val: float): ...
+    def _time(self, val: float): ...
 
     @property
     @abstractmethod
-    def idle(self) -> bool: ...
+    def _idle(self) -> bool: ...
 
-    @idle.setter
+    @_idle.setter
     @abstractmethod
-    def idle(selfc, val: bool): ...
+    def _idle(selfc, val: bool): ...
 
     @override
     def now(self):
-        return self.start_datetime + datetime.timedelta(seconds=self.time)
+        return self.start_datetime + datetime.timedelta(seconds=self._time)
 
     @override
     def schedule(
         self,
         task: Callable[[], ContinuationCertificate],
         weight: int,
-        cancellation: Cancellation | None = None,
+        cancellation: Cancellation | None,
     ):
         entry = ScheduledTask(
             task=task,
@@ -84,10 +85,10 @@ class VirtualTimeScheduler(Scheduler):
         duetime: float,
         task: Callable[[], ContinuationCertificate],
         weight: int,
-        cancellation: Cancellation | None = None,
+        cancellation: Cancellation | None,
     ):
         entry = VirtualScheduledTask(
-            duetime=self.time + duetime,
+            duetime=self._time + duetime,
             task=task,
             weight=weight,
             cancellation=cancellation,
@@ -108,7 +109,7 @@ class VirtualTimeScheduler(Scheduler):
         duetime: datetime.datetime,
         task: Callable[[], ContinuationCertificate],
         weight: int,
-        cancellation: Cancellation | None = None,
+        cancellation: Cancellation | None,
     ):
         duetime_time = (duetime - self.start_datetime).total_seconds()
 
@@ -121,8 +122,8 @@ class VirtualTimeScheduler(Scheduler):
 
     def advance_to(self, time: float):
         with self.lock:
-            idle = self.idle
-            self.idle = False
+            idle = self._idle
+            self._idle = False
 
         assert idle
 
@@ -133,19 +134,16 @@ class VirtualTimeScheduler(Scheduler):
                 self._execute_task(
                     task=entry.task,
                     weight=entry.weight,
-                    stack=entry.stack,
                     cancellation=entry.cancellation,
                 )
 
             elif self.delayed_tasks:
-                # print('delayed tasks!')
-
                 schedule_due = False
                 entry = None
 
                 with self.delayed_task_lock:
                     entry = self.delayed_tasks[0]
-                    if entry.duetime <= self.time:
+                    if entry.duetime <= self._time:
                         entry = heapq.heappop(self.delayed_tasks)
                         schedule_due = True
 
@@ -154,10 +152,10 @@ class VirtualTimeScheduler(Scheduler):
                     self.immediate_tasks.append(entry)
 
                 elif entry.duetime <= time:
-                    self.time = entry.duetime
+                    self._time = entry.duetime
                     
                 else:
-                    self.idle = True
+                    self._idle = True
                     break
 
             else:
@@ -166,41 +164,47 @@ class VirtualTimeScheduler(Scheduler):
                         pass
 
                     else:
-                        self.idle = True
+                        self._idle = True
                         break
 
 
-class MainVirtualTimeScheduler(MainScheduler, VirtualTimeScheduler):
-    @property
-    @abstractmethod
-    def is_stopped(self) -> bool: ...
+class MainVirtualTimeScheduler(MainSchedulerMixin, VirtualTimeScheduler):
+    # @property
+    # @abstractmethod
+    # def is_stopped(self) -> bool: ...
 
-    @is_stopped.setter
-    @abstractmethod
-    def is_stopped(selfc, val: bool): ...
+    # @is_stopped.setter
+    # @abstractmethod
+    # def is_stopped(selfc, val: bool): ...
 
+    # def stop(self, weight: int):
+    #     """
+    #     The stop function is capable of creating the finishing Continuation
+    #     """
 
-    def stop(self):
-        """
-        The stop function is capable of creating the finishing Continuation
-        """
+    #     with self.lock:
+    #         if self.is_stopped:
+    #             raise Exception("Scheduler can only be stopped once.")
+    #         self.is_stopped = True
 
-        with self.lock:
-            if self.is_stopped:
-                raise Exception("Scheduler can only be stopped once.")
-            self.is_stopped = True
-
-        return self._create_certificate(weight=1, stack=get_frame_summary())
-
-    def run(
-        self,
-        task: Callable[[], ContinuationCertificate],
-        cancellation: Cancellation | None = None,
-    ) -> None:
+    #     return super().stop(weight=weight)
+    
+    # @override
+    # def run(
+    #     self,
+    #     task: Callable[[], ContinuationCertificate],
+    #     weight: int,
+    #     cancellation: Cancellation | None = None,
+    # ) -> None:
         
-        with self.lock:
-            if not self.is_stopped:
-                raise Exception("Scheduler can only be run once.")
-            self.is_stopped = False
+    #     super().run(task=task, weight=weight, cancellation=cancellation)
+
+        # with self.lock:
+        #     self._weight = weight
+
+        # #     if not self.is_stopped:
+        # #         raise Exception("Scheduler can only be run once.")
+        # #     self.is_stopped = False
         
-        self.schedule(task=task, weight=1, cancellation=cancellation)
+        # self.schedule(task=task, weight=self._weight, cancellation=cancellation)
+    pass

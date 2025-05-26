@@ -2,17 +2,12 @@ from abc import ABC, abstractmethod
 from threading import Lock
 from typing import Callable
 
-from continuationmonad.utils.framesummary import FrameSummary, to_operator_traceback
-from continuationmonad.exceptions import ContinuationMonadOperatorException
+from continuationmonad.utils.framesummary import FrameSummary
+from continuationmonad.scheduler.continuationcertificate import ContinuationCertificate, ContinuationCertificateMixin
 from continuationmonad.scheduler.cancellation import Cancellation
-from continuationmonad.scheduler.continuationcertificate import ContinuationCertificate
 
 
 class InstantScheduler(ABC):
-    # @property
-    # @abstractmethod
-    # def lock(self) -> RLock: ...
-
     @abstractmethod
     def schedule(
         self,
@@ -25,38 +20,35 @@ class InstantScheduler(ABC):
         self,
         task: Callable[[], ContinuationCertificate],
         weight: int,
-        stack: tuple[FrameSummary, ...],
+        # stack: tuple[FrameSummary, ...],
         cancellation: Cancellation | None = None,
     ):
         # if task it cancelled, retrieve certificate from is_cancelled
-        if cancellation and (
-            certificate := cancellation.is_cancelled()
-        ):
-            source = cancellation
+        if cancellation and (certificate := cancellation.is_cancelled()):
+            pass
 
         else:
             # call scheduled task
             certificate = task()
-            source = task
 
-        try:
-            certificate.verify(weight=weight)
+            if not isinstance(certificate, ContinuationCertificateMixin):
+                raise AssertionError(f'Task {task} returned non valid certificate {certificate}.')
 
-        except Exception:
-            traceback_msg = to_operator_traceback(stack=stack)
-            raise ContinuationMonadOperatorException(
-                f"The certificate returned by {source} could not be verified."
-                f"\n{traceback_msg}"
-            )
+        certificate.validate(weight)
 
     def _create_certificate(
         self,
         weight: int,
         stack: tuple[FrameSummary, ...],
     ):
-        _ContinuationCertificate = type(
-            ContinuationCertificate.__name__,
-            ContinuationCertificate.__mro__,
-            ContinuationCertificate.__dict__ | {"__permission__": True},
+        # _ContinuationCertificate = type(
+        #     ContinuationCertificate.__name__,
+        #     ContinuationCertificate.__mro__,
+        #     ContinuationCertificate.__dict__ | {"__permission__": True},
+        # )
+        return ContinuationCertificate(
+            lock=Lock(), 
+            weight=weight,
+            stack=stack,
+            validated=False,
         )
-        return _ContinuationCertificate(lock=Lock(), weight=weight, stack=stack)

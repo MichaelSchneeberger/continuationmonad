@@ -11,7 +11,7 @@ class GetTrampoline(ContinuationMonadLeave[Trampoline]):
         self,
         args: SubscribeArgs,
     ):
-        return args.observer.on_success(args.trampoline, args.trampoline)
+        return args.observer.on_success(args.trampoline, args.weight, args.trampoline)
 
         # def trampoline_task():
         #     return args.observer.on_success(args.trampoline, args.trampoline)

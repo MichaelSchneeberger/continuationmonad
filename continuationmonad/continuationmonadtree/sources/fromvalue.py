@@ -16,7 +16,7 @@ class FromValue[U](ContinuationMonadLeave[U]):
         self,
         args: SubscribeArgs,
     ):
-        return args.observer.on_success(args.trampoline, self.value)
+        return args.observer.on_success(args.trampoline, args.weight, self.value)
 
         # def trampoline_task():
         #     return args.observer.on_success(args.trampoline, self.value)

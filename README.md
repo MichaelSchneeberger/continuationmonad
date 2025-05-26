@@ -36,7 +36,10 @@ def count_down(count: int):
         return continuationmonad.from_(count)
     
     else:
-        return continuationmonad.tail_rec(lambda: count_down(count - 1))
+        # schedule task on trampoline before doing a recursive call
+        return continuationmonad.schedule_trampoline().flat_map(
+            lambda _: count_down(count - 1)
+        )
 
 # Runs the continuation and returns 0
 result = continuationmonad.run(
@@ -49,16 +52,32 @@ result = continuationmonad.run(
 
 The library includes several schedulers to manage execution contexts:
 
-- **Main Scheduler**:  
-    Runs on the main thread. Blocks on run() until stop() is called.
+- **AsyncIO Scheduler**:  
+    Either run an asyncio loop on a dedicated background thread.
     ``` python
-    scheduler = continuationmonad.init_main_scheduler()
+    scheduler = continuationmonad.init_asyncio_scheduler()
     ```
-- **Event Loop Scheduler**:  
-    Runs on a dedicated background thread, useful for concurrent or offloaded work.
+    Or, run an event loop on the current thread. Blocks on run() until stop() is called.
+    ``` python
+    scheduler = continuationmonad.init_main_asyncio_scheduler()
+    ```
+
+- **Current Thread Scheduler**:  
+    A scheduler that is initially idle and starts upon the first `schedule` method call.
+    ``` python
+    scheduler = continuationmonad.init_current_thread_scheduler()
+    ```
+
+- **Event Loop Scheduler**:
+    Either run an event loop on a dedicated background thread.
     ``` python
     scheduler = continuationmonad.init_event_loop_scheduler()
     ```
+    Or, run an event loop on the current thread. Blocks on run() until stop() is called.
+    ``` python
+    scheduler = continuationmonad.init_event_loop_scheduler()
+    ```
+
 - **Trampoline**:  
     Lightweight and synchronous. Implements only schedule() and executes tasks immediately in a loop until the queue is empty.
     ``` python
@@ -72,7 +91,7 @@ The library includes several schedulers to manage execution contexts:
 
 - `defer` - Creates a deferred continuation, activated upon subscription.  
     (See [defer example](examples/basic/deferexample.py))
-- `from_`: Wraps a value in a continuation monad:
+- `from_` (or `return_`): Wraps a value in a continuation monad:
     ``` python
     c = continuationmonad.from_(5)
     ```
@@ -88,11 +107,11 @@ The library includes several schedulers to manage execution contexts:
     ``` python
     c = continuationmonad.schedule_trampoline()
     ```
-- `delay` - Schedules continuation execution on the given scheduler after a relative time:
+- `sleep` (or `delay`) - Schedules continuation execution on the given scheduler after a relative time:
     ``` python
-    c = continuationmonad.delay(scheduler, 1)
+    c = continuationmonad.sleep(scheduler, 1)
     ```
-- `tail_rec` - Performs recursive calls in a stack-safe manner using the trampoline.
+<!-- - `tail_rec` - Performs recursive calls in a stack-safe manner using the trampoline. -->
 
 
 ### Transforming operators
@@ -110,6 +129,7 @@ The library includes several schedulers to manage execution contexts:
 
 ### Output functions
 
-- `fork` - Runs the continuation on a separate trampoline.
+- `fork` (or `create_task`) - Runs the continuation on a separate trampoline.
     (See [defer example](examples/basic/deferexample.py))
 - `run` - Executes the continuation on a new trampoline and returns its result.
+- `to_asyncio` - Converts a continuation monad to a *asyncio* future.

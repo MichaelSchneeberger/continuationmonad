@@ -19,4 +19,8 @@ class ContinuationMonadImpl(ContinuationMonad):
 
 
 def init_continuation_monad(child: ContinuationMonadNode):
+    assert isinstance(child, ContinuationMonadNode), (
+        f"{child} is not a ContinuationMonadNode."
+    )
+
     return ContinuationMonadImpl(child=child)

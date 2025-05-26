@@ -1,8 +1,14 @@
 import datetime
 from typing import Callable, Iterable
 
-from continuationmonad.continuationmonadtree.sources.scheduleabsolute import ScheduleAbsolute
-from continuationmonad.continuationmonadtree.sources.schedulerelative import ScheduleRelative
+from continuationmonad.continuationmonadtree.sources.decreaseweight import DecreaseWeight
+from continuationmonad.continuationmonadtree.sources.increaseweight import IncreaseWeight
+from continuationmonad.continuationmonadtree.sources.scheduleabsolute import (
+    ScheduleAbsolute,
+)
+from continuationmonad.continuationmonadtree.sources.schedulerelative import (
+    ScheduleRelative,
+)
 from continuationmonad.scheduler.scheduler import Scheduler
 from continuationmonad.utils.framesummary import FrameSummary
 from continuationmonad.scheduler.continuationcertificate import (
@@ -32,9 +38,15 @@ def init_connect[U](
     handlers: Iterable[DeferredHandler[U]],
 ) -> Connect[U]: ...
 def init_defer[U](
-    func: Callable[[Trampoline, DeferredHandler[U]], ContinuationCertificate],
+    func: Callable[
+        [Trampoline, DeferredHandler[U]],
+        ContinuationCertificate | ContinuationMonadNode[ContinuationCertificate],
+    ],
     stack: tuple[FrameSummary, ...],
 ) -> Defer[U]: ...
+def init_decrease_weight(
+    certificates: tuple[ContinuationCertificate, ...],
+) -> DecreaseWeight: ...
 def init_flat_map[U, V](
     child: ContinuationMonadNode[U],
     func: Callable[[U], ContinuationMonadNode[V]],
@@ -43,6 +55,9 @@ def init_flat_map[U, V](
 def init_error(exception: Exception) -> FromValue[None]: ...
 def init_from_value[U](value: U) -> FromValue[U]: ...
 def init_get_trampoline() -> GetTrampoline: ...
+def init_increase_weight(
+    increase: int,
+) -> IncreaseWeight: ...
 def init_map[U, V](
     child: ContinuationMonadNode[U],
     func: Callable[[U], V],

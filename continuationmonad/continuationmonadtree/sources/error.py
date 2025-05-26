@@ -16,4 +16,4 @@ class Error[U](ContinuationMonadLeave[U]):
         self,
         args: SubscribeArgs,
     ):
-        return args.observer.on_error(args.trampoline, self.exception)
+        return args.observer.on_error(args.trampoline, args.weight, self.exception)

@@ -8,6 +8,7 @@ from continuationmonad.utils.framesummary import FrameSummaryMixin
 from continuationmonad.exceptions import ContinuationMonadOperatorException
 from continuationmonad.scheduler.continuationcertificate import (
     ContinuationCertificate,
+    ContinuationCertificateMixin,
 )
 from continuationmonad.continuationmonadtree.deferredhandler import DeferredHandler
 from continuationmonad.continuationmonadtree.subscribeargs import SubscribeArgs
@@ -23,7 +24,7 @@ class Defer[U](FrameSummaryMixin, ContinuationMonadNode[U]):
     def func(
         self,
     ) -> Callable[
-        [Trampoline, DeferredHandler], ContinuationMonadNode[ContinuationCertificate]
+        [Trampoline, DeferredHandler], ContinuationCertificate | ContinuationMonadNode[ContinuationCertificate]
     ]: ...
 
     def subscribe(
@@ -51,7 +52,7 @@ class Defer[U](FrameSummaryMixin, ContinuationMonadNode[U]):
                     )
                 )
             )
-            return args.observer.on_error(args.trampoline, exception)
+            return args.observer.on_error(args.trampoline, args.weight, exception)
 
         except Exception:
             if args.raise_immediately:
@@ -67,9 +68,9 @@ class Defer[U](FrameSummaryMixin, ContinuationMonadNode[U]):
                     )
                 )
             )
-            return args.observer.on_error(args.trampoline, exception)
+            return args.observer.on_error(args.trampoline, args.weight, exception)
 
-        if isinstance(continuation, ContinuationCertificate):
+        if isinstance(continuation, ContinuationCertificateMixin):
             assert continuation.weight == args.weight, (
                 f"{continuation.weight} does not match {args.weight}"
             )
@@ -78,11 +79,15 @@ class Defer[U](FrameSummaryMixin, ContinuationMonadNode[U]):
 
         else:
             class DeferObserver(Observer):
-                def on_success(self, _, item: ContinuationCertificate):
+                def on_success(self, _, weight, item: ContinuationCertificate):
+                    assert isinstance(item, ContinuationCertificate), f'{item} is not a Continuation Certificate.'
+                    assert item.weight == args.weight, (
+                        f"{item.weight} does not match {args.weight}"
+                    )
                     return item
 
                 def on_error(self, exception: Exception) -> ContinuationCertificate:
-                    return args.observer.on_error(args.trampoline, exception)
+                    return args.observer.on_error(args.trampoline, args.weight, exception)
 
 
             return continuation.subscribe(args=args.copy(
