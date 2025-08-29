@@ -21,7 +21,9 @@ class ContinuationCertificateMixin(FrameSummaryMixin):
 
     @property
     @abstractmethod
-    def weight(self) -> int: ...
+    def weight(self) -> int:
+        """virtual multiplicity of a task execution"""
+        ...
 
     @property
     @abstractmethod
@@ -41,9 +43,7 @@ class ContinuationCertificateMixin(FrameSummaryMixin):
             return other
 
     def split(
-        self, 
-        partition: tuple[int, ...], 
-        stack: tuple[FrameSummary, ...] | None = None
+        self, partition: tuple[int, ...], stack: tuple[FrameSummary, ...] | None = None
     ):
         assert sum(partition) == self.weight
 
@@ -64,8 +64,8 @@ class ContinuationCertificateMixin(FrameSummaryMixin):
         return tuple(gen_certificates())
 
     def take(
-        self, 
-        weight: int, 
+        self,
+        weight: int,
         stack: tuple[FrameSummary, ...] | None = None,
     ):
         if stack is None:
@@ -117,7 +117,7 @@ class ContinuationCertificate(ContinuationCertificateMixin):
     validated: bool
 
     # def copy(
-    #     self, /, 
+    #     self, /,
     #     weight: int | None = None,
     #     stack: tuple[FrameSummary, ...] | None = None,
     # ):
@@ -164,13 +164,15 @@ class CompositeContinuationCertificate(ContinuationCertificateMixin):
         def gen_weights():
             for c in self.underlying:
                 yield c.weight
+
         return sum(gen_weights())
-    
+
     @cached_property
     def validated(self):
         def gen_validated():
             for c in self.underlying:
                 yield c.validated
+
         return any(gen_validated())
 
     @override
@@ -181,9 +183,10 @@ class CompositeContinuationCertificate(ContinuationCertificateMixin):
                 f"The provided weight {weight} does not match the certificate weight {self.weight}."
                 f"\n{traceback_msg}"
             )
-        
+
         for c in self.underlying:
             c.validate(c.weight)
+
 
 def init_composite_continuation_certificate(
     underlying: tuple[ContinuationCertificateMixin, ...],

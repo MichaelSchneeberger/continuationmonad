@@ -11,7 +11,15 @@ class Observer[U](ABC):
         trampoline: Trampoline,
         weight: int,
         item: U,
-    ) -> ContinuationCertificate: ...
+    ) -> ContinuationCertificate:
+        """
+        Args:
+            trampoline: active trampline associated with the current task execution
+            weight: virtual multiplicity of a task execution
+            item: result of the task execution
+        """
+        ...
+
     @abstractmethod
     def on_error(
         self,
@@ -21,21 +29,31 @@ class Observer[U](ABC):
     ) -> ContinuationCertificate: ...
 
 
-def init_anonymous_observer[U](
-    on_success: Callable[[Trampoline, int, U], ContinuationCertificate],
-    on_error: Callable[[Trampoline, int, Exception], ContinuationCertificate] | None = None,
-):
-    if on_error is None:
-        def on_error_func(trampoline, weight, exception: Exception) -> ContinuationCertificate:
-            raise exception
-    else:
-        on_error_func = on_error
+class init_anonymous_observer[U]:
+    def __new__(
+        cls,
+        on_success: Callable[[Trampoline, int, U], ContinuationCertificate],
+        on_error: Callable[[Trampoline, int, Exception], ContinuationCertificate]
+        | None = None,
+    ):
+        if on_error is None:
 
-    class AnonymousObserver(Observer):
-        def on_success(self, trampoline: Trampoline, weight: int, item: U) -> ContinuationCertificate:
-            return on_success(trampoline, weight, item)
+            def on_error_func(
+                trampoline, weight, exception: Exception
+            ) -> ContinuationCertificate:
+                raise exception
+        else:
+            on_error_func = on_error
 
-        def on_error(self, trampoline: Trampoline, weight: int, exception: Exception) -> ContinuationCertificate:
-            return on_error_func(trampoline, weight, exception)
-        
-    return AnonymousObserver()
+        class AnonymousObserver(Observer):
+            def on_success(
+                self, trampoline: Trampoline, weight: int, item: U
+            ) -> ContinuationCertificate:
+                return on_success(trampoline, weight, item)
+
+            def on_error(
+                self, trampoline: Trampoline, weight: int, exception: Exception
+            ) -> ContinuationCertificate:
+                return on_error_func(trampoline, weight, exception)
+
+        return AnonymousObserver()
